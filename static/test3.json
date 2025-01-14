@@ -1,0 +1,14 @@
+{
+    "questions": [
+        {
+            "question": "While question",
+            "variants": ["First varrian", "var2", "var3", "var4"],
+            "correct_answer": 2
+        },
+        {
+            "question": "question text 2",
+            "variants": ["var1", "var2", "var3", "var4"],
+            "correct_answer": 1
+        }
+    ]
+}

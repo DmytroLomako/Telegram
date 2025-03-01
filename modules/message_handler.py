@@ -1,5 +1,7 @@
 from .settings import user_status, id_admins, dispatcher, bot, list_code, quiz_dict, result_dict
+from .settings_db import *
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
+from .models import User
 
 @dispatcher.message()
 # Оброблюємо усі повідомлення
@@ -33,7 +35,7 @@ async def handler_message(message:Message):
             }
             quiz_dict[code]["users"].append(dict)
             # Онулюємо статус користувача
-            user_status[id] = ''
+            del user_status[id]
             await message.answer("Waiting...")
             # Текст списку користувачів
             text = "User list:\n"
@@ -49,4 +51,22 @@ async def handler_message(message:Message):
                 'name': message.text,
                 'result': 0
             } 
-    
+        
+        elif 'enter-auth-name' in user_status[id]:
+            await message.answer("Введіть ваш пароль")
+            name = message.text
+            user_status[id] = f"enter-auth-password-{name}"
+        
+        elif 'enter-auth-password' in user_status[id]:
+            name = user_status[id].split('-')[-1]
+            password = message.text
+            session = Session()
+            user = session.query(User).filter_by(username=name, password=password).first()
+            del user_status[id]
+            if user:
+                user.telegram_id = id
+                session.commit()
+                session.close()
+                await message.answer("Ви успішно авторизовані")
+            else:
+                await message.answer("Невірний логін або пароль")

@@ -1,5 +1,6 @@
 from .settings import dispatcher, bot, id_admins, list_code, quiz_dict, result_dict, users_test_data, last_question
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from .models import *
 from .read_json import read_json
 import random
 
@@ -122,6 +123,43 @@ async def handler_button(callback: CallbackQuery):
         await bot.delete_message(chat_id=id_admin, message_id=callback.message.message_id)
         await bot.send_message(text = text_admin, chat_id = id_admin)
         del quiz_dict[code]
+        
+    elif 'user-test-result' in callback.data:
+        result_id = callback.data.split('-')[-1]
+        session = Session()
+        result = session.query(Result).filter_by(id=result_id).first()
+        session.close()
+        test = read_json(result.test_name)
+        if result:
+            results = (result.result).split(',')
+            user_result = f'Результат тесту {result.test_name}:\n'
+            count_result = 0
+            count = 0
+            for question in test['questions']:
+                index_question = test['questions'].index(question) + 1
+                question_text = question["question"]
+                all_variants = question['variants']
+                user_result += f'\n{index_question}. {question_text}\n'
+                user_answer_index = all_variants.index(results[count])
+                correct_answer = question['correct_answer']
+                answer = all_variants[int(user_answer_index)]
+                if str(user_answer_index) == str(correct_answer):
+                    count_result += 1
+                list_buttons = [[]]
+                for variant in all_variants:
+                    if variant == answer:
+                        button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data='hello')
+                    else:
+                        button = InlineKeyboardButton(text=variant, callback_data='hello')
+                    if len(list_buttons[-1]) < 2:
+                        list_buttons[-1].append(button)
+                    else:
+                        list_buttons.append([button])
+                keyboard = InlineKeyboardMarkup(inline_keyboard=list_buttons)
+                await bot.send_message(text=question_text, reply_markup=keyboard, chat_id=press_user_id)
+                count += 1
+        else:
+            await bot.edit_message_text(text='Результат не знайдено', chat_id=press_user_id, message_id=callback.message.message_id)
     
     elif 'user-test' in callback.data or 'user-answer' in callback.data:
         if 'user-test' in callback.data and callback.from_user.id in users_test_data:
@@ -148,6 +186,7 @@ async def handler_button(callback: CallbackQuery):
                     await bot.edit_message_text(text=user_result, chat_id=press_user_id, message_id=callback.message.message_id)
                     user_result = ''
                     result = 0
+                    list_answers = ''
                     for question in test['questions']:
                         index_question = test['questions'].index(question) + 1
                         question_text = question["question"]
@@ -155,6 +194,7 @@ async def handler_button(callback: CallbackQuery):
                         user_answer_index = users_test_data[press_user_id]['answers'][index_question - 1]
                         correct_answer = question['correct_answer']
                         answer = question['variants'][int(user_answer_index)]
+                        list_answers += f'{user_answer_index},'
                         if str(user_answer_index) == str(correct_answer):
                             result += 1
                         list_buttons = [[]]
@@ -169,9 +209,22 @@ async def handler_button(callback: CallbackQuery):
                                 list_buttons.append([button])
                         keyboard = InlineKeyboardMarkup(inline_keyboard=list_buttons)
                         await bot.send_message(text=question_text, reply_markup=keyboard, chat_id=press_user_id)
+                    list_answers = list_answers[:-1]
                     result = round(result / question_count * 100, 1)
                     user_result = f'\nВаш результат: {result}%'
                     await bot.send_message(text=user_result, chat_id=press_user_id)
+                    session = Session()
+                    user = session.query(User).filter_by(telegram_id=press_user_id).first()
+                    if user:
+                        result = Result(
+                            user_id = user.id,
+                            test_name = name,
+                            result = list_answers
+                        )
+                        session.add(result)
+                        session.commit()
+                        session.close()
+                        await bot.send_message(text='Ваш результат успішно збережено\nВи можете подивидить за командою /results', chat_id=press_user_id)
                     del users_test_data[press_user_id]
                 else:
                     question = test['questions'][index_question]

@@ -2,11 +2,11 @@ from aiogram import Bot, Dispatcher
 
 # @world_it_quzizz_bot
 #synhronisation with bot
-bot = Bot()
+bot = Bot('7113982823:AAGPMv4kESW2cwYbT1NV2ST39q7qLwqNMGU')
 #create dispatcher for managing bot
 dispatcher = Dispatcher()
 #admins id(quiz manager)
-id_admins = []
+id_admins = [735190619]
 #list code conecting
 list_code = []
 #stage of users (key = id)
@@ -15,6 +15,18 @@ user_status = {}
 quiz_dict = {}
 # dict result
 result_dict = {}
+
+last_question = {}
+
+users_test_data = {}
+
+# {
+#     'telegram_id': {
+#         'test_name': 'name',
+#         'question_index': 'index',
+#         'answers': ['answer1', 'answer2']
+#     }
+# }
 
 # Создание:
 # WINDOWS: python -m venv venv

@@ -11,8 +11,14 @@ async def handler_message(message:Message):
         if user_status[id] == "enter-code":
             # Перевіряємо правильність
             if message.text in list_code:
-                await message.answer("Enter name") 
-                user_status[id] = f"enter-name-{message.text}"
+                if quiz_dict[message.text]["recruitment"]:
+                    if quiz_dict[message.text]["users"] and str(id) in str(quiz_dict[message.text]["users"][0]["id"]):
+                        await message.answer("Ви вже в тесті")
+                    else:
+                        await message.answer("Enter name") 
+                        user_status[id] = f"enter-name-{message.text}"
+                else:
+                    await message.answer("Цей тест вже запущений")
             else:
                 await message.answer("This code invalid, try again")
         # Якщо користувач вводить ім'я

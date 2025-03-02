@@ -6,3 +6,5 @@ instance/
 dist/
 build/
 setup.py
+credentials.json
+token.json

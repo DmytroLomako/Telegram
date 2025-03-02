@@ -1,7 +1,8 @@
-from .settings import user_status, id_admins, dispatcher, bot, list_code, quiz_dict, result_dict
+from .settings import user_status, id_admins, dispatcher, bot, list_code, quiz_dict, result_dict, users_test_data
 from .settings_db import *
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from .models import User
+from .read_json import read_json
 
 @dispatcher.message()
 # Оброблюємо усі повідомлення
@@ -70,3 +71,50 @@ async def handler_message(message:Message):
                 await message.answer("Ви успішно авторизовані")
             else:
                 await message.answer("Невірний логін або пароль")
+                
+        elif 'user-input' in user_status[id]:
+            test_name = user_status[id].split('-')[-1]
+            question_index = int(user_status[id].split('-')[-2])
+            user_answer = message.text
+            test = read_json(test_name)
+            
+            users_test_data[id]['question_index'] += 1
+            users_test_data[id]['answers'].append(user_answer)
+            
+            question_index = users_test_data[id]['question_index']
+            question = test['questions'][question_index]
+            
+            
+            question_text = question["question"]
+            question_type = question["type"]
+            question_variants = question["variants"]
+            correct_answer = question['correct_answer']
+            if len(correct_answer) > 1:
+                question_text += '\nОберіть усі правильні відповіді'
+            if question_type == 'input':
+                user_status[id] = f'user-input-{question_index}-{test_name}'
+                text = f'{question_text}\nВведіть відповідь'
+                await message.answer(text=text)
+            else:
+                list_button = [[]]
+                chosen = False
+                for variant in question_variants:
+                    index = question_variants.index(variant)
+                    if len(correct_answer) > 1:
+                        button = InlineKeyboardButton(text=variant, callback_data=f'user-multianswer-{chosen}-{question_index}-{index}-{test_name}')
+                    else:
+                        button = InlineKeyboardButton(text=variant, callback_data=f'user-answer-{index}-{test_name}')
+                    if len(list_button[-1]) < 2:
+                        list_button[-1].append(button)
+                    else:
+                        list_button.append([button])
+                if len(correct_answer) > 1:
+                    button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'user-answer-{index}-{test_name}')
+                    list_button.append([button])
+                button = InlineKeyboardButton(text='❌ Зупинити тест ❌', callback_data=f'user-end-test-{index}-{test_name}')
+                list_button.append([button])
+                keyboard = InlineKeyboardMarkup(inline_keyboard=list_button)  
+                try:
+                    await message.answer(text=question_text, reply_markup=keyboard)
+                except Exception as error:
+                    print(error)

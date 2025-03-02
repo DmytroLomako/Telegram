@@ -3,3 +3,6 @@ static/
 venv/
 .DS_Store
 instance/
+dist/
+build/
+setup.py

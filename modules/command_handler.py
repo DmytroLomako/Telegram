@@ -1,4 +1,4 @@
-from .settings import dispatcher,id_admins,bot, user_status, users_test_data
+from .settings import dispatcher,id_admins, user_status, users_test_data
 from aiogram.filters import CommandStart, Command
 from .models import *
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
@@ -9,6 +9,7 @@ import os
 async def start(message: Message):
     # перевіряємо чи адмін користувач
     if message.from_user.id in id_admins:
+        # await bot.send_message(chat_id=message.from_user.id, text="<span style=\"color:#fc5252;\">text</span>", parse_mode=ParseMode.HTML)
         await message.answer('Hello admin👋, you can execute this commands:\n\n/start - Greetings, starting the bot\n/create - Creating a quiz \n/delete - Delete quiz\n/start_quiz - Start public quiz\n/quiz - Start private quiz\n/results - Shows all results')
     else:
         await message.answer('Hello user👋, to join to test enter /join')
@@ -25,10 +26,7 @@ def read_all_tests(test_type: str) -> InlineKeyboardMarkup:
     list_buttons = [[]]
     for name in list_names:
         button = InlineKeyboardButton(text=name, callback_data=f'{test_type}-{name}')
-        if len(list_buttons[-1]) < 2:
-            list_buttons[-1].append(button)
-        else:
-            list_buttons.append([button])
+        list_buttons.append([button])
     return InlineKeyboardMarkup(inline_keyboard=list_buttons)
 
 # /start_quiz

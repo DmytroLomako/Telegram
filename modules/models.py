@@ -10,6 +10,7 @@ class User(Base):
     username = sqlalchemy.Column(sqlalchemy.String)
     telegram_id = sqlalchemy.Column(sqlalchemy.Integer, unique=True, nullable=True, default=None)
     password = sqlalchemy.Column(sqlalchemy.String(15))
+    email = sqlalchemy.Column(sqlalchemy.String)
     def __repr__(self):
         return f'User: {self.username}, Id: {self.telegram_id}'
     
@@ -20,6 +21,8 @@ class Result(Base):
     user_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('users.id', ondelete='CASCADE'))
     test_name = sqlalchemy.Column(sqlalchemy.String)
     result = sqlalchemy.Column(sqlalchemy.String)
+    right_answers = sqlalchemy.Column(sqlalchemy.Integer)
+    wrong_answers = sqlalchemy.Column(sqlalchemy.Integer)
     def __repr__(self):
         return f'Result: {self.result}, User: {self.user_id}'
     

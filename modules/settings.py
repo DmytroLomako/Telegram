@@ -1,19 +1,17 @@
 from aiogram import Bot, Dispatcher
 
-# @world_it_quzizz_bot
-#synhronisation with bot
-bot = Bot('7113982823:AAGPMv4kESW2cwYbT1NV2ST39q7qLwqNMGU')
-#create dispatcher for managing bot
+
+bot = Bot('') # Your Telegram Bot Api Token
 dispatcher = Dispatcher()
-#admins id(quiz manager)
-id_admins = [735190619]
-#list code conecting
+
+id_admins = [] # Your Telegram Id
+
 list_code = []
-#stage of users (key = id)
+
 user_status = {}
-#quiz info dict (users,admin)
+
 quiz_dict = {}
-# dict result
+
 result_dict = {}
 
 last_question = {}

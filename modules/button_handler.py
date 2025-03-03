@@ -73,13 +73,14 @@ async def handler_button(callback: CallbackQuery):
                     correct_answer = list_question[index]["correct_answer"]
                     if question_type == 'input':
                         for user in list_user:
-                            print(user['answer'])
                             if user['answer'] == None:
-                                user_status[user['id']] = f'quiz-input-{index}-{quiz_name}'
-                                print(user_status)
+                                user_status[user['id']] = f'quiz-input-{code}-{index}-{quiz_name}'
                                 question_text += '\nВведіть відповідь'
                                 message = await bot.send_message(text=question_text, chat_id=user['id'])
                                 last_question[user["id"]] = message.message_id
+                                list_user_name = ""
+                                name = user['name']
+                                list_user_name += f'\n • {name}'
                     else:
                         list_button = [[]]
                         if len(correct_answer) == 1:
@@ -102,10 +103,11 @@ async def handler_button(callback: CallbackQuery):
                             list_button.append([button])
                         keyboard = InlineKeyboardMarkup(inline_keyboard=list_button)  
                         list_user_name = ""
-                        if len(list_question[index]["correct_answer"]) == 1:
-                            if "next_question" in callback.data:
-                                quiz_dict[code]['question_index'] += 1
                         for user in list_user:
+                            try:
+                                del user_status[user['id']]
+                            except:
+                                pass
                             name = user['name']
                             if user['answer'] != None or index == 0:
                                 message = await bot.send_message(text=question_text,chat_id=user['id'], reply_markup=keyboard)
@@ -118,15 +120,17 @@ async def handler_button(callback: CallbackQuery):
                                 last_question[user["id"]] = message.message_id
                             user['answer'] = None
                             list_user_name += f'\n • {name}'
-                        button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
-                        button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
-                        admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
-                        # \n - в строке помогает перенести содержимое на следующую строку
-                        try:
-                            message = await bot.edit_message_text(chat_id=id_admin, text=f"Users answered:\nDon't answered: {list_user_name}", message_id=callback.message.message_id, reply_markup=admin_keyboard)
-                            quiz_dict[code]["id_message_answer"] = message.message_id
-                        except Exception as error:
-                            print(error)
+                    if "next_question" in callback.data:
+                        quiz_dict[code]['question_index'] += 1
+                    button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
+                    button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
+                    admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
+                    # \n - в строке помогает перенести содержимое на следующую строку
+                    try:
+                        message = await bot.edit_message_text(chat_id=id_admin, text=f"Users answered:\nDon't answered: {list_user_name}", message_id=callback.message.message_id, reply_markup=admin_keyboard)
+                        quiz_dict[code]["id_message_answer"] = message.message_id
+                    except Exception as error:
+                        print(error)
 
     if 'end_quiz' in callback.data:
         quiz_name = callback.data.split('-')[-2]
@@ -306,11 +310,9 @@ async def handler_button(callback: CallbackQuery):
                         question_text = question["question"]
                         question_type = question["type"]
                         user_result += f'\n{index_question}. {question_text}\n'
-                        print(users_test_data[press_user_id]['answers'])
                         correct_answer = question['correct_answer']
                         if question_type == 'input':
                             user_answer_index = users_test_data[press_user_id]['answers'][index_question - 1]
-                            print(correct_answer, user_answer_index, index_question)
                             answer = user_answer_index
                             list_answers += f'{[answer]},'
                             if answer == str(correct_answer[0]):
@@ -335,7 +337,6 @@ async def handler_button(callback: CallbackQuery):
                                 for index in user_answer_index:
                                     answer.append(question['variants'][int(index)])
                                 list_answers += f'{answer},'
-                                print(correct_answer, answer)
                                 if set(correct_answer) == set(answer):
                                     result += 1
                                     right += 1
@@ -468,28 +469,26 @@ async def handler_button(callback: CallbackQuery):
             index_v = int(callback.data.split('|')[-1])
             question_text = list_question[index]["question"]
             question_variants = list_question[index]["variants"]
+            answer = question_variants[index_v]
             correct_answer = list_question[index]["correct_answer"]
             list_button = [[]]
             for user in quiz_dict[code]["users"]:
                 if user["id"] == press_user_id:
                     if user['answer'] == None:
-                        user['answer'] = [index_v]
+                        user['answer'] = [answer]
                     else:
-                        if index_v not in user['answer']:
-                            user['answer'].append(index_v)
+                        if answer not in user['answer']:
+                            user['answer'].append(answer)
                         else:
-                            user['answer'].remove(index_v)
+                            user['answer'].remove(answer)
                     user_answer = user['answer']   
+            print(user_answer)
             for variant in question_variants:
                 index_variant = question_variants.index(variant)
-                if int(index_v) == question_variants.index(variant):
-                    if question_variants.index(variant) in user_answer:
-                        button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
+                if variant in user_answer:
+                    button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
                 else:
-                    if question_variants.index(variant) in user_answer:
-                        button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
-                    else:
-                        button = InlineKeyboardButton(text=f'{variant}', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
+                    button = InlineKeyboardButton(text=f'{variant}', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
                 if len(list_button[-1]) < 2:
                     list_button[-1].append(button)
                 else:
@@ -509,16 +508,20 @@ async def handler_button(callback: CallbackQuery):
             quiz_name = quiz_dict[code]["quiz_name"]
             question = read_json(quiz_name)['questions']
             que_text = question[question_index]['question']
+            correct_answer = question[question_index]['correct_answer']
+            if len(correct_answer) == 1:
+                answer = question[question_index]['variants'][int(index)]
+            else:
+                answer = ast.literal_eval(index)
             que_answer = ''
             if len(index) == 1:
                 que_answer = question[question_index]['variants'][int(index[0])]
             else:
                 que_answer = ''
-                for i in ast.literal_eval(index):
-                    que_answer += (question[question_index]['variants'][int(i)])
+                for i in answer:
+                    que_answer += i
                     que_answer += ', '
                 que_answer = que_answer[:-2]
-            correct_answer = question[question_index]['correct_answer']
             
             await bot.edit_message_text(text=f"{que_text}\nYour answer: {que_answer}", message_id=callback.message.message_id, chat_id=press_user_id)
 
@@ -527,11 +530,17 @@ async def handler_button(callback: CallbackQuery):
             for user in quiz_dict[code]["users"]:
                 name = user['name']
                 if user["id"] == press_user_id and user["answer"] != None:
-                    if user["answer"] == correct_answer:
-                        result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1   
+                    print(user["answer"], 1)
+                    if len(correct_answer) == 1:
+                        if user["answer"] == correct_answer[0]:
+                            result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1   
+                    else:
+                        if set(correct_answer) == set(user["answer"]):
+                            result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1
                 if user["id"] == press_user_id and user["answer"] == None:
-                    user["answer"] = index
-                    if index == str(correct_answer[0]):
+                    user["answer"] = answer
+                    print(user["answer"], 2)
+                    if answer == str(correct_answer[0]):
                         result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1
                 if user["answer"] != None:
                     list_user_answered += f'\n • {name}'

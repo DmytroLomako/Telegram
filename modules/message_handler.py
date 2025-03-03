@@ -75,8 +75,36 @@ async def handler_message(message:Message):
         elif 'quiz-input' in user_status[id]:
             test_name = user_status[id].split('-')[-1]
             question_index = int(user_status[id].split('-')[-2])
+            code = user_status[id].split('-')[-3]
+            list_users = quiz_dict[code]['users']
+            test = read_json(test_name)
+            question = test['questions'][question_index]
+            correct_answer = question['correct_answer'][0]
             user_answer = message.text
-            await message.answer("Waiting...")
+            list_user_answered = ""
+            list_user_not_answered = ""
+            await message.answer("Вашу відповідь зараховано")
+            if user_answer == correct_answer:
+                result_dict[f"{test_name}_{code}"][str(id)]['result'] += 1
+            for user in list_users:
+                name = user['name']
+                if user['id'] == id:
+                    user['answer'] = message.text
+                    del user_status[id]
+                if user["answer"] != None:
+                    list_user_answered += f'\n • {name}'
+                else:
+                    list_user_not_answered += f'\n • {name}'
+            id_admin = quiz_dict[code]["chat_id_admin"]
+            button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
+            button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{test_name}-{code}')
+            admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
+            try:
+                message_answer = quiz_dict[code]['id_message_answer']
+                message = await bot.edit_message_text(chat_id=id_admin, text=f"Users answered: {list_user_answered}\nDon't answered: {list_user_not_answered}", message_id=message_answer, reply_markup=admin_keyboard)
+                quiz_dict[code]["id_message_answer"] = message.message_id
+            except Exception as error:
+                print(error)
                 
         elif 'user-input' in user_status[id]:
             test_name = user_status[id].split('-')[-1]

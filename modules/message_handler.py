@@ -72,6 +72,12 @@ async def handler_message(message:Message):
             else:
                 await message.answer("Невірний логін або пароль")
                 
+        elif 'quiz-input' in user_status[id]:
+            test_name = user_status[id].split('-')[-1]
+            question_index = int(user_status[id].split('-')[-2])
+            user_answer = message.text
+            await message.answer("Waiting...")
+                
         elif 'user-input' in user_status[id]:
             test_name = user_status[id].split('-')[-1]
             question_index = int(user_status[id].split('-')[-2])

@@ -1,5 +1,5 @@
 import customtkinter as ctk
-from .sheets import read, service
+from .add_users import add_users
 
 
 app = ctk.CTk()
@@ -19,7 +19,7 @@ def authorize(name, password):
         auth_button.destroy()
         bot_working = ctk.CTkLabel(app, text="Бот працює", font=("Arial", 40))
         bot_working.pack(pady=60)
-        add_users_button = ctk.CTkButton(app, text="Додати користувачів", font=("Arial", 20), width=230, height=40, command=lambda: read(service, 'Sheet!A2:C100'))
+        add_users_button = ctk.CTkButton(app, text="Додати користувачів", font=("Arial", 20), width=230, height=40, command=lambda: add_users())
         add_users_button.pack(pady=15)
     else:
         auth_text.configure(text="Неправильне ім'я або пароль")

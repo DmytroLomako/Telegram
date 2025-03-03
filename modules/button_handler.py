@@ -68,54 +68,65 @@ async def handler_button(callback: CallbackQuery):
                     del quiz_dict[code]
                 else:
                     question_text = list_question[index]["question"]
+                    question_type = list_question[index]["type"]
                     question_variants = list_question[index]["variants"]
                     correct_answer = list_question[index]["correct_answer"]
-                    list_button = [[]]
-                    if len(correct_answer) == 1:
-                        for variant in question_variants:
-                            index_variant = question_variants.index(variant)
-                            button = InlineKeyboardButton(text=variant, callback_data=f'variant|{code}|{index_variant}')
-                            if len(list_button[-1]) < 2:
-                                list_button[-1].append(button)
-                            else:
-                                list_button.append([button])
+                    if question_type == 'input':
+                        for user in list_user:
+                            print(user['answer'])
+                            if user['answer'] == None:
+                                user_status[user['id']] = f'quiz-input-{index}-{quiz_name}'
+                                print(user_status)
+                                question_text += '\nВведіть відповідь'
+                                message = await bot.send_message(text=question_text, chat_id=user['id'])
+                                last_question[user["id"]] = message.message_id
                     else:
-                        for variant in question_variants:
-                            index_variant = question_variants.index(variant)
-                            button = InlineKeyboardButton(text=variant, callback_data=f'multivariant|{index}|{quiz_name}|{code}|{index_variant}')
-                            if len(list_button[-1]) < 2:
-                                list_button[-1].append(button)
-                            else:
-                                list_button.append([button])
-                        button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'variant|{code}|{index_variant}')
-                        list_button.append([button])
-                    keyboard = InlineKeyboardMarkup(inline_keyboard=list_button)  
-                    list_user_name = ""
-                    if len(list_question[index]["correct_answer"]) == 1:
-                        if "next_question" in callback.data:
-                            quiz_dict[code]['question_index'] += 1
-                    for user in list_user:
-                        name = user['name']
-                        if user['answer'] != None or index == 0:
-                            message = await bot.send_message(text=question_text,chat_id=user['id'], reply_markup=keyboard)
-                            last_question[user["id"]] = message.message_id
+                        list_button = [[]]
+                        if len(correct_answer) == 1:
+                            for variant in question_variants:
+                                index_variant = question_variants.index(variant)
+                                button = InlineKeyboardButton(text=variant, callback_data=f'variant|{code}|{index_variant}')
+                                if len(list_button[-1]) < 2:
+                                    list_button[-1].append(button)
+                                else:
+                                    list_button.append([button])
                         else:
-                            message_id = last_question[user["id"]]
-                            prev_question = list_question[index - 1]["question"]
-                            await bot.edit_message_text(text=f'{prev_question}\nВи не встигли відповісти', chat_id=user['id'], message_id=message_id)
-                            message = await bot.send_message(text=question_text,chat_id=user['id'], reply_markup=keyboard)
-                            last_question[user["id"]] = message.message_id
-                        user['answer'] = None
-                        list_user_name += f'\n • {name}'
-                    button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
-                    button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
-                    admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
-                    # \n - в строке помогает перенести содержимое на следующую строку
-                    try:
-                        message = await bot.edit_message_text(chat_id=id_admin, text=f"Users answered:\nDon't answered: {list_user_name}", message_id=callback.message.message_id, reply_markup=admin_keyboard)
-                        quiz_dict[code]["id_message_answer"] = message.message_id
-                    except Exception as error:
-                        print(error)
+                            for variant in question_variants:
+                                index_variant = question_variants.index(variant)
+                                button = InlineKeyboardButton(text=variant, callback_data=f'multivariant|{index}|{quiz_name}|{code}|{index_variant}')
+                                if len(list_button[-1]) < 2:
+                                    list_button[-1].append(button)
+                                else:
+                                    list_button.append([button])
+                            button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'variant|{code}|{index_variant}')
+                            list_button.append([button])
+                        keyboard = InlineKeyboardMarkup(inline_keyboard=list_button)  
+                        list_user_name = ""
+                        if len(list_question[index]["correct_answer"]) == 1:
+                            if "next_question" in callback.data:
+                                quiz_dict[code]['question_index'] += 1
+                        for user in list_user:
+                            name = user['name']
+                            if user['answer'] != None or index == 0:
+                                message = await bot.send_message(text=question_text,chat_id=user['id'], reply_markup=keyboard)
+                                last_question[user["id"]] = message.message_id
+                            else:
+                                message_id = last_question[user["id"]]
+                                prev_question = list_question[index - 1]["question"]
+                                await bot.edit_message_text(text=f'{prev_question}\nВи не встигли відповісти', chat_id=user['id'], message_id=message_id)
+                                message = await bot.send_message(text=question_text,chat_id=user['id'], reply_markup=keyboard)
+                                last_question[user["id"]] = message.message_id
+                            user['answer'] = None
+                            list_user_name += f'\n • {name}'
+                        button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
+                        button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
+                        admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
+                        # \n - в строке помогает перенести содержимое на следующую строку
+                        try:
+                            message = await bot.edit_message_text(chat_id=id_admin, text=f"Users answered:\nDon't answered: {list_user_name}", message_id=callback.message.message_id, reply_markup=admin_keyboard)
+                            quiz_dict[code]["id_message_answer"] = message.message_id
+                        except Exception as error:
+                            print(error)
 
     if 'end_quiz' in callback.data:
         quiz_name = callback.data.split('-')[-2]

@@ -1,8 +1,8 @@
-from .settings import dispatcher, bot, id_admins, list_code, quiz_dict, result_dict, users_test_data, last_question, user_status
+from .settings import *
 from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from .models import *
-from .read_json import read_json
-import random, ast
+from .read_static import read_json, get_image
+import random, ast, aiogram.types
 from .user_result import save_result
 
 @dispatcher.callback_query()
@@ -303,6 +303,8 @@ async def handler_button(callback: CallbackQuery):
                 else:
                     question = test['questions'][index_question]
                     question_text = question["question"]
+                    question_image = question["image"]
+                    prev_question_image = test['questions'][index_question - 1]["image"]
                     question_type = question["type"]
                     question_variants = question["variants"]
                     correct_answer = question['correct_answer']
@@ -311,7 +313,23 @@ async def handler_button(callback: CallbackQuery):
                     if question_type == 'input':
                         user_status[press_user_id] = f'user-input-{index_question}-{name}'
                         text = f'{question_text}\nВведіть відповідь'
-                        await bot.edit_message_text(text=text, chat_id=press_user_id, message_id=callback.message.message_id)
+                        if question_image:
+                            if prev_question_image:
+                                media = aiogram.types.InputMediaPhoto(
+                                    type = 'photo',
+                                    media = get_image(question_image),
+                                    caption = question_text,
+                                )
+                                await bot.edit_message_media(media=media, chat_id=press_user_id, message_id=callback.message.message_id)
+                            else:
+                                await bot.delete_message(chat_id=press_user_id, message_id=callback.message.message_id)
+                                await bot.send_photo(photo=get_image(question_image), caption=question_text, chat_id=press_user_id)
+                        else:
+                            if prev_question_image:
+                                await bot.delete_message(chat_id=press_user_id, message_id=callback.message.message_id)
+                                await bot.send_message(text=text, chat_id=press_user_id)
+                            else:
+                                await bot.edit_message_text(text=text, chat_id=press_user_id, message_id=callback.message.message_id)
                     else:
                         list_button = [[]]
                         chosen = False
@@ -330,19 +348,39 @@ async def handler_button(callback: CallbackQuery):
                             list_button.append([button])
                         button = InlineKeyboardButton(text='❌ Зупинити тест ❌', callback_data=f'user-end-test-{index}-{name}')
                         list_button.append([button])
-                        keyboard = InlineKeyboardMarkup(inline_keyboard=list_button)  
+                        keyboard = InlineKeyboardMarkup(inline_keyboard=list_button) 
                         try:
-                            await bot.edit_message_text(text=question_text,chat_id=press_user_id, message_id=callback.message.message_id, reply_markup=keyboard)
+                            if question_image:
+                                if prev_question_image:
+                                    media = aiogram.types.InputMediaPhoto(
+                                        type = 'photo',
+                                        media = get_image(question_image),
+                                        caption = question_text,
+                                    )
+                                    await bot.edit_message_media(media=media, chat_id=press_user_id, message_id=callback.message.message_id, reply_markup=keyboard)
+                                else:
+                                    await bot.delete_message(chat_id=press_user_id, message_id=callback.message.message_id)
+                                    await bot.send_photo(photo=get_image(question_image), caption=question_text, chat_id=press_user_id, reply_markup=keyboard) 
+                            else:
+                                if prev_question_image:
+                                    await bot.delete_message(chat_id=press_user_id, message_id=callback.message.message_id)
+                                    await bot.send_message(text=question_text, chat_id=press_user_id, reply_markup=keyboard)
+                                else:
+                                    await bot.edit_message_text(text=question_text, chat_id=press_user_id, message_id=callback.message.message_id, reply_markup=keyboard)
                         except Exception as error:
-                            print(error)
-            
+                            print(error)          
             
     elif 'user-end-test' in callback.data:
         name = callback.data.split('-')[-1]
         test = read_json(name)
         question_count = len(test['questions'])
-        user_result = 'Тест завершено\nВаші результати:\n'
-        await bot.edit_message_text(text=user_result, chat_id=press_user_id, message_id=callback.message.message_id)
+        # user_result = 'Тест завершено\nВаші результати:\n'
+        # try:
+        #     await bot.edit_message_text(text=user_result, chat_id=press_user_id, message_id=callback.message.message_id)
+        # except:
+        #     await bot.delete_message(chat_id=press_user_id, message_id=callback.message.message_id)
+        #     await bot.send_message(text=user_result, chat_id=press_user_id)
+        await bot.delete_message(chat_id=press_user_id, message_id=callback.message.message_id)
         user_result = ''
         result = 0
         count_answers = len(users_test_data[press_user_id]['answers'])
@@ -350,38 +388,47 @@ async def handler_button(callback: CallbackQuery):
             index_question = test['questions'].index(question) + 1
             if index_question > count_answers:
                 break
-            question_text = question["question"]
-            user_result += f'\n{index_question}. {question_text}\n'
+            # question_text = question["question"]
+            # user_result += f'\n{index_question}. {question_text}\n'
+            question_type = question["type"]
             user_answer_index = users_test_data[press_user_id]['answers'][index_question - 1]
             correct_answer = question['correct_answer']
-            if len(user_answer_index) == 1:
-                answer = question['variants'][int(user_answer_index[0])]
-                if str(user_answer_index[0]) == str(correct_answer[0]):
+            if question_type == 'input':
+                user_answer_index = users_test_data[press_user_id]['answers'][index_question - 1]
+                answer = user_answer_index
+                if answer == str(correct_answer[0]):
                     result += 1
             else:
-                answer = []
-                for index in user_answer_index:
-                    answer.append(question['variants'][int(index)])
-                if correct_answer == user_answer_index:
-                    result += 1
-            list_buttons = [[]]
-            for variant in question['variants']:
-                if type(answer) == int:
-                    if variant == answer:
-                        button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data='hello')
-                    else:
-                        button = InlineKeyboardButton(text=variant, callback_data='hello')
+                user_answer_index = users_test_data[press_user_id]['answers'][index_question - 1]
+                if len(user_answer_index) == 1:
+                    answer = question['variants'][int(user_answer_index[0])]
+                    if answer == str(correct_answer[0]):
+                        result += 1
                 else:
-                    if variant in answer:
-                        button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data='hello')
-                    else:
-                        button = InlineKeyboardButton(text=variant, callback_data='hello')
-                list_buttons.append([button])
-            keyboard = InlineKeyboardMarkup(inline_keyboard=list_buttons)
-            await bot.send_message(text=question_text, reply_markup=keyboard, chat_id=press_user_id)
+                    answer = []
+                    for index in user_answer_index:
+                        answer.append(question['variants'][int(index)])
+                    if set(correct_answer) == set(answer):
+                        result += 1
+            # list_buttons = [[]]
+            # for variant in question['variants']:
+            #     if type(answer) == int:
+            #         if variant == answer:
+            #             button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data='hello')
+            #         else:
+            #             button = InlineKeyboardButton(text=variant, callback_data='hello')
+            #     else:
+            #         if variant in answer:
+            #             button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data='hello')
+            #         else:
+            #             button = InlineKeyboardButton(text=variant, callback_data='hello')
+            #     list_buttons.append([button])
+            # keyboard = InlineKeyboardMarkup(inline_keyboard=list_buttons)
+            # await bot.send_message(text=question_text, reply_markup=keyboard, chat_id=press_user_id)
         result = round(result / count_answers * 100, 1)
         user_result = f'\nВаш результат: {result}%'
         await bot.send_message(text=user_result, chat_id=press_user_id)
+        await bot.send_message(text="Ваш результат не було збережено, бо ви не пройшли тест до кінця", chat_id=press_user_id)
         del users_test_data[press_user_id]
             
     elif 'multivariant' in callback.data:

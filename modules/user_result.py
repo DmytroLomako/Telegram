@@ -1,6 +1,6 @@
 from .models import *
 from .settings import *
-from .read_json import read_json
+from .read_static import read_json
 
 
 async def save_result(press_user_id, name, message_id = None):
@@ -10,7 +10,11 @@ async def save_result(press_user_id, name, message_id = None):
     if message_id == None:
         await bot.send_message(text=user_result, chat_id=press_user_id)
     else:
-        await bot.edit_message_text(text=user_result, chat_id=press_user_id, message_id=message_id)
+        try:
+            await bot.edit_message_text(text=user_result, chat_id=press_user_id, message_id=message_id)
+        except:
+            await bot.delete_message(chat_id=press_user_id, message_id=message_id)
+            await bot.send_message(text=user_result, chat_id=press_user_id)
     user_result = ''
     result = 0
     right = 0

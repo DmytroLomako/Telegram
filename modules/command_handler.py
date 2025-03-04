@@ -4,7 +4,7 @@ from .models import *
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 import os
 
-# оброблюємо команду старт
+
 @dispatcher.message(CommandStart())
 async def start(message: Message):
     # перевіряємо чи адмін користувач
@@ -15,32 +15,26 @@ async def start(message: Message):
         await message.answer('Hello user👋, to join to test enter /join')
         
 def read_all_tests(test_type: str) -> InlineKeyboardMarkup:
-    static_path = os.path.abspath(__file__ + '/../../static')
+    tests_path = os.path.abspath(__file__ + '/../../static/tests')
     list_names = []
-    # Убираем из именни файла .json
-    # os.listdir(path) - Получает список всех файлов\папок по указаному пути
-    for name in os.listdir(static_path):
+    for name in os.listdir(tests_path):
         new_name = name.split('.json')[0]
         list_names.append(new_name)
-    # Создаём кнопки и делим их на ряды
     list_buttons = [[]]
     for name in list_names:
         button = InlineKeyboardButton(text=name, callback_data=f'{test_type}-{name}')
         list_buttons.append([button])
     return InlineKeyboardMarkup(inline_keyboard=list_buttons)
 
-# /start_quiz
 @dispatcher.message(Command(commands = ['start_quiz']))
 async def start_quiz(message: Message):
     if message.from_user.id in id_admins:
         keyboard = read_all_tests('quiz')
         await message.answer('Select quiz:', reply_markup=keyboard)
 
-# оброблюємо команду join
 @dispatcher.message(Command(commands=['join']))
 async def join(message: Message):
     await message.answer('Please, enter the code.')
-    # очікуємо введеня коду від користувача
     user_status[message.from_user.id] = 'enter-code'
     
 @dispatcher.message(Command(commands=['quiz']))

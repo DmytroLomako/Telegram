@@ -65,7 +65,11 @@ def save_input_question(question, answer, modal_window):
 def create_question_input():
     modal_window = ctk.CTkToplevel(app)
     modal_window.title("Додати запитання з введенням")
-    modal_window.geometry("400x300")
+    modal_window_width = 400
+    modal_window_height = 300
+    modal_window_x = (app.winfo_screenwidth() // 2) - (modal_window_width // 2)
+    modal_window_y = (app.winfo_screenheight() // 2) - (modal_window_height // 2) - 50
+    modal_window.geometry(f'{modal_window_width}x{modal_window_height}+{modal_window_x}+{modal_window_y}')
     modal_window.resizable(False, False)
     question_input = ctk.CTkEntry(modal_window, placeholder_text="Введіть запитання", width=330, height=60, font=("Arial", 16))
     question_input.pack(pady=30)

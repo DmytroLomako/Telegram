@@ -1,9 +1,10 @@
-from .settings import user_status, id_admins, dispatcher, bot, list_code, quiz_dict, result_dict, users_test_data
+from .settings import *
 from .settings_db import *
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
 from .models import User
-from .read_json import read_json
+from .read_static import read_json, get_image
 from .user_result import save_result
+import aiogram.types
 
 @dispatcher.message()
 # Оброблюємо усі повідомлення
@@ -124,6 +125,8 @@ async def handler_message(message:Message):
                 
                 
                 question_text = question["question"]
+                question_image = question["image"]
+                prev_question_image = test['questions'][question_index - 1]["image"]
                 question_type = question["type"]
                 question_variants = question["variants"]
                 correct_answer = question['correct_answer']
@@ -133,7 +136,10 @@ async def handler_message(message:Message):
                 if question_type == 'input':
                     user_status[id] = f'user-input-{question_index}-{test_name}'
                     text = f'{question_text}\nВведіть відповідь'
-                    await message.answer(text=text)
+                    if question_image:
+                        await bot.send_photo(photo=get_image(question_image), caption=question_text, chat_id=id)
+                    else:
+                        await message.answer(text=text)
                 else:
                     list_button = [[]]
                     chosen = False
@@ -143,10 +149,10 @@ async def handler_message(message:Message):
                             button = InlineKeyboardButton(text=variant, callback_data=f'user-multianswer-{chosen}-{question_index}-{index}-{test_name}')
                         else:
                             button = InlineKeyboardButton(text=variant, callback_data=f'user-answer-{index}-{test_name}')
-                        if len(list_button[-1]) < 2:
-                            list_button[-1].append(button)
-                        else:
-                            list_button.append([button])
+                        # if len(list_button[-1]) < 2:
+                        #     list_button[-1].append(button)
+                        # else:
+                        list_button.append([button])
                     if len(correct_answer) > 1:
                         button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'user-answer-{index}-{test_name}')
                         list_button.append([button])
@@ -154,6 +160,9 @@ async def handler_message(message:Message):
                     list_button.append([button])
                     keyboard = InlineKeyboardMarkup(inline_keyboard=list_button)  
                     try:
-                        await message.answer(text=question_text, reply_markup=keyboard)
+                        if question_image:
+                            await bot.send_photo(photo=get_image(question_image), caption=question_text, chat_id=id, reply_markup=keyboard) 
+                        else:
+                            await message.answer(text=question_text, chat_id=id, reply_markup=keyboard)
                     except Exception as error:
                         print(error)

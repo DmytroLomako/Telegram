@@ -36,6 +36,7 @@ async def handler_button(callback: CallbackQuery):
                 "id_message_answer": None
             }
             result_dict[f"{quiz_name}_{quiz_code}"] = {}
+    
         elif 'start-' in callback.data or "next_question" in callback.data:
             code = callback.data.split('-')[1]
             if code in quiz_dict:
@@ -69,19 +70,22 @@ async def handler_button(callback: CallbackQuery):
                     del quiz_dict[code]
                 else:
                     question_text = list_question[index]["question"]
+                    question_image = list_question[index]["image"]
                     question_type = list_question[index]["type"]
                     question_variants = list_question[index]["variants"]
                     correct_answer = list_question[index]["correct_answer"]
                     if question_type == 'input':
                         for user in list_user:
-                            if user['answer'] == None:
-                                user_status[user['id']] = f'quiz-input-{code}-{index}-{quiz_name}'
-                                question_text += '\nВведіть відповідь'
+                            user_status[user['id']] = f'quiz-input-{code}-{index}-{quiz_name}'
+                            question_text += '\nВведіть відповідь'
+                            if question_image:
+                                message = await bot.send_photo(photo=get_image(question_image), caption=question_text, chat_id=user['id'])
+                            else:
                                 message = await bot.send_message(text=question_text, chat_id=user['id'])
-                                last_question[user["id"]] = message.message_id
-                                list_user_name = ""
-                                name = user['name']
-                                list_user_name += f'\n • {name}'
+                            last_question[user["id"]] = message.message_id
+                            list_user_name = ""
+                            name = user['name']
+                            list_user_name += f'\n • {name}'
                     else:
                         list_button = [[]]
                         if len(correct_answer) == 1:
@@ -111,13 +115,23 @@ async def handler_button(callback: CallbackQuery):
                                 pass
                             name = user['name']
                             if user['answer'] != None or index == 0:
-                                message = await bot.send_message(text=question_text,chat_id=user['id'], reply_markup=keyboard)
+                                if question_image:
+                                    message = await bot.send_photo(photo=get_image(question_image), caption=question_text, chat_id=user['id'], reply_markup=keyboard)
+                                else:
+                                    message = await bot.send_message(text=question_text, chat_id=user['id'], reply_markup=keyboard)
                                 last_question[user["id"]] = message.message_id
                             else:
                                 message_id = last_question[user["id"]]
                                 prev_question = list_question[index - 1]["question"]
-                                await bot.edit_message_text(text=f'{prev_question}\nВи не встигли відповісти', chat_id=user['id'], message_id=message_id)
-                                message = await bot.send_message(text=question_text,chat_id=user['id'], reply_markup=keyboard)
+                                try:
+                                    await bot.edit_message_text(text=f'{prev_question}\nВи не встигли відповісти', chat_id=user['id'], message_id=message_id)
+                                except:
+                                    await bot.delete_message(chat_id=user['id'], message_id=message_id)
+                                    await bot.send_message(text=f'{prev_question}\nВи не встигли відповісти', chat_id=user['id'])
+                                if question_image:
+                                    message = await bot.send_photo(photo=get_image(question_image), caption=question_text, chat_id=user['id'], reply_markup=keyboard)
+                                else:
+                                    message = await bot.send_message(text=question_text,chat_id=user['id'], reply_markup=keyboard)
                                 last_question[user["id"]] = message.message_id
                             user['answer'] = None
                             list_user_name += f'\n • {name}'
@@ -126,7 +140,6 @@ async def handler_button(callback: CallbackQuery):
                     button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
                     button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
                     admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
-                    # \n - в строке помогает перенести содержимое на следующую строку
                     try:
                         message = await bot.edit_message_text(chat_id=id_admin, text=f"Users answered:\nDon't answered: {list_user_name}", message_id=callback.message.message_id, reply_markup=admin_keyboard)
                         quiz_dict[code]["id_message_answer"] = message.message_id
@@ -478,6 +491,7 @@ async def handler_button(callback: CallbackQuery):
             quiz_name = quiz_dict[code]["quiz_name"]
             question = read_json(quiz_name)['questions']
             que_text = question[question_index]['question']
+            que_image = question[question_index]['image']
             correct_answer = question[question_index]['correct_answer']
             if len(correct_answer) == 1:
                 answer = question[question_index]['variants'][int(index)]
@@ -504,8 +518,6 @@ async def handler_button(callback: CallbackQuery):
                     list_user_not_answered += f'\n • {name}'
                     
             que_answer = ''
-            print(index)
-            print(answer)
             if len(index) == 1:
                 que_answer = question[question_index]['variants'][int(index[0])]
             else:
@@ -513,10 +525,13 @@ async def handler_button(callback: CallbackQuery):
                 for i in answer:
                     que_answer += i
                     que_answer += ', '
-                print(que_answer, 3)
                 que_answer = que_answer[:-2]
             
-            await bot.edit_message_text(text=f"{que_text}\nYour answer: {que_answer}", message_id=callback.message.message_id, chat_id=press_user_id)
+            if que_image:
+                await bot.delete_message(chat_id=press_user_id, message_id=callback.message.message_id)
+                await bot.send_message(text=f"{que_text}\nYour answer: {que_answer}", chat_id=press_user_id)
+            else:
+                await bot.edit_message_text(text=f"{que_text}\nYour answer: {que_answer}", message_id=callback.message.message_id, chat_id=press_user_id)
                     
             button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
             button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')

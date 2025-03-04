@@ -3,6 +3,7 @@ from aiogram.types import CallbackQuery, InlineKeyboardButton, InlineKeyboardMar
 from .models import *
 from .read_json import read_json
 import random, ast
+from .user_result import save_result
 
 @dispatcher.callback_query()
 # оброблюємо натиск кнопки
@@ -87,18 +88,18 @@ async def handler_button(callback: CallbackQuery):
                             for variant in question_variants:
                                 index_variant = question_variants.index(variant)
                                 button = InlineKeyboardButton(text=variant, callback_data=f'variant|{code}|{index_variant}')
-                                if len(list_button[-1]) < 2:
-                                    list_button[-1].append(button)
-                                else:
-                                    list_button.append([button])
+                                # if len(list_button[-1]) < 2:
+                                #     list_button[-1].append(button)
+                                # else:
+                                list_button.append([button])
                         else:
                             for variant in question_variants:
                                 index_variant = question_variants.index(variant)
                                 button = InlineKeyboardButton(text=variant, callback_data=f'multivariant|{index}|{quiz_name}|{code}|{index_variant}')
-                                if len(list_button[-1]) < 2:
-                                    list_button[-1].append(button)
-                                else:
-                                    list_button.append([button])
+                                # if len(list_button[-1]) < 2:
+                                #     list_button[-1].append(button)
+                                # else:
+                                list_button.append([button])
                             button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'variant|{code}|{index_variant}')
                             list_button.append([button])
                         keyboard = InlineKeyboardMarkup(inline_keyboard=list_button)  
@@ -262,10 +263,10 @@ async def handler_button(callback: CallbackQuery):
                     button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
                 else:
                     button = InlineKeyboardButton(text=variant, callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
-            if len(list_buttons[-1]) < 2:
-                list_buttons[-1].append(button)
-            else:
-                list_buttons.append([button])
+            # if len(list_buttons[-1]) < 2:
+            #     list_buttons[-1].append(button)
+            # else:
+            list_buttons.append([button])
         button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'user-answer-{chosen}--{index_variant}-{name}')
         list_buttons.append([button])
         button = InlineKeyboardButton(text='❌ Зупинити тест ❌', callback_data=f'user-end-test-{index}-{name}')
@@ -298,84 +299,7 @@ async def handler_button(callback: CallbackQuery):
                     }
                 question_count = len(test['questions'])
                 if index_question >= question_count:
-                    user_result = 'Тест завершено\n'
-                    await bot.edit_message_text(text=user_result, chat_id=press_user_id, message_id=callback.message.message_id)
-                    user_result = ''
-                    result = 0
-                    right = 0
-                    wrong = 0
-                    list_answers = ''
-                    for question in test['questions']:
-                        index_question = test['questions'].index(question) + 1
-                        question_text = question["question"]
-                        question_type = question["type"]
-                        user_result += f'\n{index_question}. {question_text}\n'
-                        correct_answer = question['correct_answer']
-                        if question_type == 'input':
-                            user_answer_index = users_test_data[press_user_id]['answers'][index_question - 1]
-                            answer = user_answer_index
-                            list_answers += f'{[answer]},'
-                            if answer == str(correct_answer[0]):
-                                result += 1
-                                right += 1
-                            else:
-                                wrong += 1
-                        else:
-                            user_answer_index = users_test_data[press_user_id]['answers'][index_question - 1]
-                            if len(user_answer_index) == 1:
-                                answer = question['variants'][int(user_answer_index[0])]
-                                # list_answers += f'{[user_answer_index[0]]},'
-                                list_answers += f'{[answer]},'
-                                if answer == str(correct_answer[0]):
-                                    result += 1
-                                    right += 1
-                                else:
-                                    wrong += 1
-                            else:
-                                answer = []
-                                # list_answers += f'{user_answer_index},'
-                                for index in user_answer_index:
-                                    answer.append(question['variants'][int(index)])
-                                list_answers += f'{answer},'
-                                if set(correct_answer) == set(answer):
-                                    result += 1
-                                    right += 1
-                                else:
-                                    wrong += 1
-                            # list_buttons = [[]]
-                            # for variant in question['variants']:
-                            #     if type(answer) == int:
-                            #         if variant == answer:
-                            #             button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data='hello')
-                            #         else:
-                            #             button = InlineKeyboardButton(text=variant, callback_data='hello')
-                            #     else:
-                            #         if variant in answer:
-                            #             button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data='hello')
-                            #         else:
-                            #             button = InlineKeyboardButton(text=variant, callback_data='hello')
-                            #     list_buttons.append([button])
-                            # keyboard = InlineKeyboardMarkup(inline_keyboard=list_buttons)
-                            # await bot.send_message(text=question_text, reply_markup=keyboard, chat_id=press_user_id)
-                    list_answers = list_answers[:-1]
-                    result = round(result / question_count * 100, 1)
-                    user_result = f'\nВаш результат: {result}%'
-                    await bot.send_message(text=user_result, chat_id=press_user_id)
-                    session = Session()
-                    user = session.query(User).filter_by(telegram_id=press_user_id).first()
-                    if user:
-                        result = Result(
-                            user_id = user.id,
-                            test_name = name,
-                            result = list_answers,
-                            right_answers = right,
-                            wrong_answers = wrong
-                        )
-                        session.add(result)
-                        session.commit()
-                        session.close()
-                        await bot.send_message(text='Ваш результат успішно збережено\nВи можете подивидить за командою /results', chat_id=press_user_id)
-                    del users_test_data[press_user_id]
+                    await save_result(press_user_id, name, callback.message.message_id)
                 else:
                     question = test['questions'][index_question]
                     question_text = question["question"]
@@ -397,10 +321,10 @@ async def handler_button(callback: CallbackQuery):
                                 button = InlineKeyboardButton(text=variant, callback_data=f'user-multianswer-{chosen}-{index_question}-{index}-{name}')
                             else:
                                 button = InlineKeyboardButton(text=variant, callback_data=f'user-answer-{index}-{name}')
-                            if len(list_button[-1]) < 2:
-                                list_button[-1].append(button)
-                            else:
-                                list_button.append([button])
+                            # if len(list_button[-1]) < 2:
+                            #     list_button[-1].append(button)
+                            # else:
+                            list_button.append([button])
                         if len(correct_answer) > 1:
                             button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'user-answer-{index}-{name}')
                             list_button.append([button])
@@ -482,18 +406,17 @@ async def handler_button(callback: CallbackQuery):
                         else:
                             user['answer'].remove(answer)
                     user_answer = user['answer']   
-            print(user_answer)
             for variant in question_variants:
                 index_variant = question_variants.index(variant)
                 if variant in user_answer:
                     button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
                 else:
                     button = InlineKeyboardButton(text=f'{variant}', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
-                if len(list_button[-1]) < 2:
-                    list_button[-1].append(button)
-                else:
-                    list_button.append([button])
-            button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'variant|{True}|{code}|{user_answer}')
+                # if len(list_button[-1]) < 2:
+                #     list_button[-1].append(button)
+                # else:
+                list_button.append([button])
+            button = InlineKeyboardButton(text='✅ Відповісти ✅', callback_data=f'variant|{True}|{code}|000')
             list_button.append([button])
             keyboard = InlineKeyboardMarkup(inline_keyboard=list_button)
             await bot.edit_message_reply_markup(chat_id=press_user_id, message_id=callback.message.message_id, reply_markup=keyboard)
@@ -511,9 +434,31 @@ async def handler_button(callback: CallbackQuery):
             correct_answer = question[question_index]['correct_answer']
             if len(correct_answer) == 1:
                 answer = question[question_index]['variants'][int(index)]
-            else:
-                answer = ast.literal_eval(index)
+
+            list_user_answered = ""
+            list_user_not_answered = ""
+            for user in quiz_dict[code]["users"]:
+                name = user['name']
+                if user["id"] == press_user_id and user["answer"] != None:
+                    if len(correct_answer) == 1:
+                        if user["answer"] == correct_answer[0]:
+                            result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1   
+                    else:
+                        answer = user["answer"]
+                        if set(correct_answer) == set(user["answer"]):
+                            result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1
+                if user["id"] == press_user_id and user["answer"] == None:
+                    user["answer"] = answer
+                    if answer == str(correct_answer[0]):
+                        result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1
+                if user["answer"] != None:
+                    list_user_answered += f'\n • {name}'
+                else:
+                    list_user_not_answered += f'\n • {name}'
+                    
             que_answer = ''
+            print(index)
+            print(answer)
             if len(index) == 1:
                 que_answer = question[question_index]['variants'][int(index[0])]
             else:
@@ -521,31 +466,10 @@ async def handler_button(callback: CallbackQuery):
                 for i in answer:
                     que_answer += i
                     que_answer += ', '
+                print(que_answer, 3)
                 que_answer = que_answer[:-2]
             
             await bot.edit_message_text(text=f"{que_text}\nYour answer: {que_answer}", message_id=callback.message.message_id, chat_id=press_user_id)
-
-            list_user_answered = ""
-            list_user_not_answered = ""
-            for user in quiz_dict[code]["users"]:
-                name = user['name']
-                if user["id"] == press_user_id and user["answer"] != None:
-                    print(user["answer"], 1)
-                    if len(correct_answer) == 1:
-                        if user["answer"] == correct_answer[0]:
-                            result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1   
-                    else:
-                        if set(correct_answer) == set(user["answer"]):
-                            result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1
-                if user["id"] == press_user_id and user["answer"] == None:
-                    user["answer"] = answer
-                    print(user["answer"], 2)
-                    if answer == str(correct_answer[0]):
-                        result_dict[f'{quiz_name}_{code}'][str(press_user_id)]['result'] += 1
-                if user["answer"] != None:
-                    list_user_answered += f'\n • {name}'
-                else:
-                    list_user_not_answered += f'\n • {name}'
                     
             button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
             button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')

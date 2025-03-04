@@ -27,9 +27,13 @@ def add_users():
         data = pd.read_csv(file_path, sep='\t')
         
     for index, row in data.iterrows():
-        print(row['Username'], row['Password'], row['Email'])   
-        session = Session()
-        user = User(username=row['Username'], password=row['Password'], email=row['Email'])
-        session.add(user)
-        session.commit()
-        session.close()
+        try:
+            print(row['Username'], row['Password'], row['Email'])   
+            session = Session()
+            user = User(username=row['Username'], password=row['Password'], email=row['Email'])
+            session.add(user)
+            session.commit()
+            session.close()
+            
+        except Exception as error:
+            print(f'Помилка при створенні користувача {index}: {error}')

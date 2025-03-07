@@ -163,6 +163,6 @@ async def handler_message(message:Message):
                         if question_image:
                             await bot.send_photo(photo=get_image(question_image), caption=question_text, chat_id=id, reply_markup=keyboard) 
                         else:
-                            await message.answer(text=question_text, chat_id=id, reply_markup=keyboard)
+                            await message.answer(text=question_text, reply_markup=keyboard)
                     except Exception as error:
                         print(error)

@@ -91,7 +91,7 @@ async def handler_button(callback: CallbackQuery):
                         if len(correct_answer) == 1:
                             for variant in question_variants:
                                 index_variant = question_variants.index(variant)
-                                button = InlineKeyboardButton(text=variant, callback_data=f'variant|{code}|{index_variant}')
+                                button = InlineKeyboardButton(text=f'{index_variant + 1}. {variant}', callback_data=f'variant|{code}|{index_variant}')
                                 # if len(list_button[-1]) < 2:
                                 #     list_button[-1].append(button)
                                 # else:
@@ -99,7 +99,7 @@ async def handler_button(callback: CallbackQuery):
                         else:
                             for variant in question_variants:
                                 index_variant = question_variants.index(variant)
-                                button = InlineKeyboardButton(text=variant, callback_data=f'multivariant|{index}|{quiz_name}|{code}|{index_variant}')
+                                button = InlineKeyboardButton(text=f'{index_variant + 1}. {variant}', callback_data=f'multivariant|{index}|{quiz_name}|{code}|{index_variant}')
                                 # if len(list_button[-1]) < 2:
                                 #     list_button[-1].append(button)
                                 # else:
@@ -263,19 +263,19 @@ async def handler_button(callback: CallbackQuery):
             index_variant = question['variants'].index(variant)
             if variant == question["variants"][index]:
                 if question['variants'].index(variant) in answers:
-                    button = InlineKeyboardButton(text=f'{variant}', callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
+                    button = InlineKeyboardButton(text=f'{index_variant + 1}. {variant}', callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
                     users_test_data[press_user_id]["answers"][-1].remove(question['variants'].index(variant))
                 else:
-                    button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
+                    button = InlineKeyboardButton(text=f'{index_variant + 1}. 🔘{variant}🔘', callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
                     if chosen == 'True':
                         users_test_data[press_user_id]["answers"][-1].append(index)
                     else:
                         users_test_data[press_user_id]["answers"].append([index])
             else:
                 if question['variants'].index(variant) in answers:
-                    button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
+                    button = InlineKeyboardButton(text=f'{index_variant + 1}. 🔘{variant}🔘', callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
                 else:
-                    button = InlineKeyboardButton(text=variant, callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
+                    button = InlineKeyboardButton(text=f'{index_variant + 1}. {variant}', callback_data=f'user-multianswer-{True}-{question_index}-{index_variant}-{name}')
             # if len(list_buttons[-1]) < 2:
             #     list_buttons[-1].append(button)
             # else:
@@ -349,9 +349,9 @@ async def handler_button(callback: CallbackQuery):
                         for variant in question_variants:
                             index = question_variants.index(variant)
                             if len(correct_answer) > 1:
-                                button = InlineKeyboardButton(text=variant, callback_data=f'user-multianswer-{chosen}-{index_question}-{index}-{name}')
+                                button = InlineKeyboardButton(text=f'{index + 1}. {variant}', callback_data=f'user-multianswer-{chosen}-{index_question}-{index}-{name}')
                             else:
-                                button = InlineKeyboardButton(text=variant, callback_data=f'user-answer-{index}-{name}')
+                                button = InlineKeyboardButton(text=f'{index + 1}. {variant}', callback_data=f'user-answer-{index}-{name}')
                             # if len(list_button[-1]) < 2:
                             #     list_button[-1].append(button)
                             # else:
@@ -469,9 +469,9 @@ async def handler_button(callback: CallbackQuery):
             for variant in question_variants:
                 index_variant = question_variants.index(variant)
                 if variant in user_answer:
-                    button = InlineKeyboardButton(text=f'🔘{variant}🔘', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
+                    button = InlineKeyboardButton(text=f'{index_variant + 1}. 🔘{variant}🔘', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
                 else:
-                    button = InlineKeyboardButton(text=f'{variant}', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
+                    button = InlineKeyboardButton(text=f'{index_variant + 1}. {variant}', callback_data=f'multivariant|{index}|{name}|{code}|{index_variant}')
                 # if len(list_button[-1]) < 2:
                 #     list_button[-1].append(button)
                 # else:

@@ -14,22 +14,29 @@ async def start(message: Message):
     else:
         await message.answer('Hello user👋, to join to test enter /join')
         
-def read_all_tests(test_type: str) -> InlineKeyboardMarkup:
-    tests_path = os.path.abspath(__file__ + '/../../static/tests')
-    list_names = []
-    for name in os.listdir(tests_path):
-        new_name = name.split('.json')[0]
-        list_names.append(new_name)
-    list_buttons = [[]]
-    for name in list_names:
-        button = InlineKeyboardButton(text=name, callback_data=f'{test_type}-{name}')
-        list_buttons.append([button])
+def read_all_tests(test_type: str, teachers: list[str]) -> InlineKeyboardMarkup:
+    list_buttons = []
+    for teacher in teachers:
+        try:
+            tests_path = os.path.abspath(__file__ + f'/../../static/tests/{teacher}/')
+            list_names = []
+            for name in os.listdir(tests_path):
+                new_name = name.split('.json')[0]
+                list_names.append(new_name)
+            for name in list_names:
+                button = InlineKeyboardButton(text=f'{name}', callback_data=f'{test_type}-{teacher}/{name}')
+                list_buttons.append([button])
+        except:
+            pass
     return InlineKeyboardMarkup(inline_keyboard=list_buttons)
 
 @dispatcher.message(Command(commands = ['start_quiz']))
 async def start_quiz(message: Message):
     if message.from_user.id in id_admins:
-        keyboard = read_all_tests('quiz')
+        session = Session()
+        teacher = session.query(Teacher).filter_by(telegram_id=message.from_user.id).first()
+        keyboard = read_all_tests('quiz', [teacher.username])
+        session.close()
         await message.answer('Select quiz:', reply_markup=keyboard)
 
 @dispatcher.message(Command(commands=['join']))
@@ -39,7 +46,16 @@ async def join(message: Message):
     
 @dispatcher.message(Command(commands=['quiz']))
 async def user_quiz(message: Message):
-    keyboard = read_all_tests('user-test')
+    session = Session()
+    user = session.query(User).filter_by(telegram_id=message.from_user.id).first()
+    if user:
+        teachers_name = []
+        for teacher in user.teachers:
+            teachers_name.append(teacher.username)
+        keyboard = read_all_tests('user-test', teachers_name)
+    else:
+        keyboard = read_all_tests('user-test', ['not_login_tests'])
+    session.close()
     if message.from_user.id in users_test_data:
         await message.answer('Завершіть будь ласка тест, перед тим як починати новий')
     else:
@@ -47,6 +63,11 @@ async def user_quiz(message: Message):
         
 @dispatcher.message(Command(commands=['auth']))
 async def authorization(message: Message):
+    for user_type in [User, Teacher]:
+        user = Session().query(user_type).filter_by(telegram_id=message.from_user.id).first()
+        if user:
+            await message.answer('Ви вже авторизовані')
+            return 1
     await message.answer("Введіть ваше ім'я")
     user_status[message.from_user.id] = 'enter-auth-name'
     
@@ -73,12 +94,15 @@ async def result(message: Message):
 @dispatcher.message(Command(commands=['logout']))
 async def logout(message: Message):
     session = Session()
-    user = session.query(User).filter_by(telegram_id=message.from_user.id).first()
-    if user:
-        user.telegram_id = None
-        session.commit()
-        session.close()
-        await message.answer('Ви успішно вийшли з акаунту')
-    else:
-        await message.answer('Ви не авторизовані')
-        session.close()
+    for user_type in [User, Teacher]:
+        user = session.query(user_type).filter_by(telegram_id=message.from_user.id).first()
+        if user:
+            user.telegram_id = None
+            session.commit()
+            session.close()
+            await message.answer('Ви успішно вийшли з акаунту')
+            if user_type == Teacher:
+                id_admins.remove(message.from_user.id)
+            return 1
+    session.close()
+    await message.answer('Ви не авторизовані')

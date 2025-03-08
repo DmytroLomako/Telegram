@@ -1,7 +1,7 @@
 from .settings import *
 from .settings_db import *
 from aiogram.types import Message, InlineKeyboardButton, InlineKeyboardMarkup
-from .models import User
+from .models import User, Teacher
 from .read_static import read_json, get_image
 from .user_result import save_result
 import aiogram.types
@@ -64,15 +64,19 @@ async def handler_message(message:Message):
             name = user_status[id].split('-')[-1]
             password = message.text
             session = Session()
-            user = session.query(User).filter_by(username=name, password=password).first()
             del user_status[id]
-            if user:
-                user.telegram_id = id
-                session.commit()
-                session.close()
-                await message.answer("Ви успішно авторизовані")
-            else:
-                await message.answer("Невірний логін або пароль")
+            for user_type in [User, Teacher]:
+                user = session.query(user_type).filter_by(username=name, password=password).first()
+                if user:
+                    user.telegram_id = id
+                    session.commit()
+                    session.close()
+                    await message.answer("Ви успішно авторизовані")
+                    if user_type == Teacher:
+                        id_admins.append(id)
+                    return user
+            session.close()
+            await message.answer("Невірний логін або пароль")
                 
         elif 'quiz-input' in user_status[id]:
             test_name = user_status[id].split('-')[-1]
@@ -146,9 +150,9 @@ async def handler_message(message:Message):
                     for variant in question_variants:
                         index = question_variants.index(variant)
                         if len(correct_answer) > 1:
-                            button = InlineKeyboardButton(text=variant, callback_data=f'user-multianswer-{chosen}-{question_index}-{index}-{test_name}')
+                            button = InlineKeyboardButton(text=f'{index + 1}. {variant}', callback_data=f'user-multianswer-{chosen}-{question_index}-{index}-{test_name}')
                         else:
-                            button = InlineKeyboardButton(text=variant, callback_data=f'user-answer-{index}-{test_name}')
+                            button = InlineKeyboardButton(text=f'{index+ 1}. {variant}', callback_data=f'user-answer-{index}-{test_name}')
                         # if len(list_button[-1]) < 2:
                         #     list_button[-1].append(button)
                         # else:

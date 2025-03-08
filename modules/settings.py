@@ -1,10 +1,17 @@
 from aiogram import Bot, Dispatcher
+from .models import Teacher, Session, User
 
 
-bot = Bot('') # Your Telegram Bot Api Token
+bot = Bot('7113982823:AAGPMv4kESW2cwYbT1NV2ST39q7qLwqNMGU') # Your Telegram Bot Api Token
 dispatcher = Dispatcher()
 
 id_admins = [] # Your Telegram Id
+session = Session()
+teachers = session.query(Teacher).all()
+for teacher in teachers:
+    if teacher.telegram_id:
+        id_admins.append(teacher.telegram_id)
+session.close()
 
 list_code = []
 

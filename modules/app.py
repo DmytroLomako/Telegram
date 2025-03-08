@@ -1,11 +1,15 @@
 import PIL.Image
 import PIL.ImageTk
-import customtkinter as ctk, os, json, PIL
+import customtkinter as ctk, os, json, PIL, webbrowser
 from .add_users import add_users
+from .models import Teacher, Session, Result, User
+from .get_user_results import get_results
 
 questions = []
 
 app = ctk.CTk()
+auth_teacher = False
+list_images_path = []
 width = 600
 height = 440
 x = (app.winfo_screenwidth() // 2) - (width // 2)
@@ -13,10 +17,28 @@ y = (app.winfo_screenheight() // 2) - (height // 2) - 50
 app.geometry(f'{width}x{height}+{x}+{y}')
 app.title("Settings")
 app.resizable(False, False)
+
+def open_link(link):
+    webbrowser.open(link)
+
+world_label = ctk.CTkLabel(app, text="WORLD", font=("Arial", 20), text_color='orange')
+it_label = ctk.CTkLabel(app, text=".IT", font=("Arial", 20))
+it_label.place(x=560, y=400)
+world_label.place(x=486, y=400)
+it_label.bind("<Button-1>", lambda e: open_link("https://www.instagram.com/world.it.academy/"))
+world_label.bind("<Button-1>", lambda e: open_link("https://www.instagram.com/world.it.academy/"))
+button_help = ctk.CTkButton(app, text="Підтримка", font=("Arial", 20), width=120, height=35, command=lambda: open_link("mailto:worldit_academy@worldit.academy"))
+button_help.place(x=470, y=10)
+
+dmytro_lomako = ctk.CTkLabel(app, text="DmytroLomako", font=("Arial", 20), text_color='white')
+dmytro_lomako.place(x=330, y=400)
+dmytro_lomako.bind("<Button-1>", lambda e: open_link("https://github.com/DmytroLomako/Telegram"))
+
 frame_all_questions = ctk.CTkScrollableFrame(app, width=600, height=350, fg_color='transparent')
 bot_working = ctk.CTkLabel(app, text="Бот працює", font=("Arial", 40))
-add_users_button = ctk.CTkButton(app, text="Додати користувачів", font=("Arial", 20), width=230, height=40, command=lambda: add_users())
+add_users_button = ctk.CTkButton(app, text="Додати користувачів", font=("Arial", 20), width=230, height=40, command=lambda: add_users(auth_teacher))
 button_add_test = ctk.CTkButton(app, text="Додати тест", font=("Arial", 20), width=230, height=40, command=lambda: add_test())
+button_get_results = ctk.CTkButton(app, text="Отримати результати", font=("Arial", 20), width=230, height=40, command=lambda: get_results_window())
 input_test_name = ctk.CTkEntry(app, placeholder_text="Введіть назву тесту", width=300, height=40, font=("Arial", 18))
 button_back = ctk.CTkButton(app, text="⬅", font=("Arial", 20), width=30, height=40, command=lambda: back())
 frame_buttons = ctk.CTkFrame(frame_all_questions, width=500, height=80, fg_color='transparent')
@@ -28,9 +50,41 @@ button_create_question_input.pack(side="right", padx=10)
 button_save_test = ctk.CTkButton(frame_all_questions, text="Зберегти", font=("Arial", 20), width=200, height=40, command=lambda: save_test())
 button_save_test.pack(pady=20)
 
+def get_results_window():
+    modal_window = ctk.CTkToplevel(app)
+    modal_window.title("Результати")
+    modal_window_width = 400
+    modal_window_height = 300
+    modal_window_x = (app.winfo_screenwidth() // 2) - (modal_window_width // 2)
+    modal_window_y = (app.winfo_screenheight() // 2) - (modal_window_height // 2) - 50
+    modal_window.geometry(f'{modal_window_width}x{modal_window_height}+{modal_window_x}+{modal_window_y}')
+    scrollable_frame = ctk.CTkScrollableFrame(modal_window, width=350, height=280)
+    scrollable_frame.pack(pady=10)
+    session = Session()
+    results = session.query(Result).all()
+    list_users = []
+    for result in results:
+        if result.user_id not in list_users:
+            user = session.query(User).filter_by(id=result.user_id).first()
+            button = ctk.CTkButton(scrollable_frame, text=f'{user.username}', font=("Arial", 16), width=200, height=35, command=lambda user=user: get_results(result.user_id))
+            button.pack(pady=10)
+            list_users.append(result.user_id)
+
 def save_test():
     file_name = input_test_name.get()
-    path_to_file = os.path.abspath(__file__ + f"/../../static/tests/{file_name}.json")
+    os.makedirs(os.path.abspath(__file__ + f"/../../static/tests/{auth_teacher.username}"), exist_ok=True)
+    path_to_file = os.path.abspath(__file__ + f"/../../static/tests/{auth_teacher.username}/{file_name}.json")
+
+    for image_path in list_images_path:
+        image = PIL.Image.open(image_path)
+        image_path = image_path.split('/')[-1]
+        image_path = f'{file_name}/{image_path}'
+        os.makedirs(os.path.abspath(__file__ + f"/../../static/images/{file_name}"), exist_ok=True)
+        image.save(os.path.abspath(__file__ + f"/../../static/images/{image_path}"))
+    for question in questions:
+        if question['image']:
+            question['image'] = f'{file_name}/{question["image"]}'
+    
     data = {
         'questions': questions
     }
@@ -39,13 +93,10 @@ def save_test():
     back()
 
 def save_input_question(question, answer, modal_window, image_path):
-    test_name = input_test_name.get()
+
     if image_path:
-        image = PIL.Image.open(image_path)
+        list_images_path.append(image_path)
         image_path = image_path.split('/')[-1]
-        image_path = f'{test_name}/{image_path}'
-        os.makedirs(os.path.abspath(__file__ + f"/../../static/images/{test_name}"), exist_ok=True)
-        image.save(os.path.abspath(__file__ + f"/../../static/images/{image_path}"))
     
     questions.append({
         'question': question,
@@ -56,7 +107,10 @@ def save_input_question(question, answer, modal_window, image_path):
     })
     def delete_question(index):
         if questions[index]['image']:
-            os.remove(os.path.abspath(__file__ + f"/../../static/images/{questions[index]['image']}"))
+            for path in list_images_path:
+                if questions[index]['image'] in path.split('/')[-1]:
+                    list_images_path.remove(path)
+                    break
         del questions[index]
         frame_questions.destroy()
     modal_window.destroy()
@@ -120,11 +174,8 @@ def save_variant_question(question, variant_inputs, checkboxes, modal_window, im
         if checkboxes[i].get() == 1:
             correct_answer.append(variants[i])
     if image_path:
-        image = PIL.Image.open(image_path)
+        list_images_path.append(image_path)
         image_path = image_path.split('/')[-1]
-        image_path = f'{test_name}/{image_path}'
-        os.makedirs(os.path.abspath(__file__ + f"/../../static/images/{test_name}"), exist_ok=True)
-        image.save(os.path.abspath(__file__ + f"/../../static/images/{image_path}"))
     questions.append({
         'question': question,
         "image": image_path,
@@ -138,7 +189,10 @@ def save_variant_question(question, variant_inputs, checkboxes, modal_window, im
         
     def delete_question(index):
         if questions[index]['image']:
-            os.remove(os.path.abspath(__file__ + f"/../../static/images/{questions[index]['image']}"))
+            for path in list_images_path:
+                if questions[index]['image'] in path.split('/')[-1]:
+                    list_images_path.remove(path)
+                    break
         del questions[index]
         frame_questions.destroy()
         
@@ -156,9 +210,7 @@ def save_variant_question(question, variant_inputs, checkboxes, modal_window, im
     frame_buttons.pack(pady=30)
     button_save_test.pack(pady=20)
     frame_questions.pack_propagate(False)
-    print(questions)
-    
-    
+      
 def create_question_variant():
     global modal_window_height, modal_window_y, image
     answer_frames = []
@@ -181,29 +233,33 @@ def create_question_variant():
         modal_window_height -= 60
         modal_window_y = (app.winfo_screenheight() // 2) - (modal_window_height // 2) - 50
         modal_window.geometry(f'{modal_window_width}x{modal_window_height}+{modal_window_x}+{modal_window_y}')
+        add_button.place(x=360, y=105)
         for i in range(len(answer_inputs)):
             answer_inputs[i].configure(placeholder_text=f"Варіант {i+1}")
     
     def add_answer():
         global modal_window_height, modal_window_y
-        button_save.pack_forget()
-        modal_window_height += 60
-        modal_window_y = (app.winfo_screenheight() // 2) - (modal_window_height // 2) - 50
-        modal_window.geometry(f'{modal_window_width}x{modal_window_height}+{modal_window_x}+{modal_window_y}')
-        answer_frame = ctk.CTkFrame(modal_window, width=330, height=40, fg_color='transparent')
-        answer_frame.pack(pady=10)
-        trash_button = ctk.CTkLabel(answer_frame, text="", image=trash_img)
-        trash_button.pack(side='left')
-        variant_number = len(answer_frames) + 1
-        answer_input = ctk.CTkEntry(answer_frame, placeholder_text=f"Варіант {variant_number}", width=280, height=40, font=("Arial", 16))
-        answer_input.pack(side='left', padx=10)
-        answer_checkbox = ctk.CTkCheckBox(answer_frame, text="", width=12, height=12)
-        answer_checkbox.pack(side='right')
-        answer_frames.append(answer_frame)
-        answer_inputs.append(answer_input)
-        answer_checkboxs.append(answer_checkbox)
-        trash_button.bind("<Button-1>", lambda event: (answer_frame.destroy(), answer_frames.remove(answer_frame), answer_inputs.remove(answer_input), answer_checkboxs.remove(answer_checkbox), delete_answer()) if len(answer_frames) > 2 else None)
-        button_save.pack(pady=20)
+        if len(answer_frames) < 5:
+            if len(answer_frames) == 4:
+                add_button.place_forget()
+            button_save.pack_forget()
+            modal_window_height += 60
+            modal_window_y = (app.winfo_screenheight() // 2) - (modal_window_height // 2) - 50
+            modal_window.geometry(f'{modal_window_width}x{modal_window_height}+{modal_window_x}+{modal_window_y}')
+            answer_frame = ctk.CTkFrame(modal_window, width=330, height=40, fg_color='transparent')
+            answer_frame.pack(pady=10)
+            trash_button = ctk.CTkLabel(answer_frame, text="", image=trash_img)
+            trash_button.pack(side='left')
+            variant_number = len(answer_frames) + 1
+            answer_input = ctk.CTkEntry(answer_frame, placeholder_text=f"Варіант {variant_number}", width=280, height=40, font=("Arial", 16))
+            answer_input.pack(side='left', padx=10)
+            answer_checkbox = ctk.CTkCheckBox(answer_frame, text="", width=12, height=12)
+            answer_checkbox.pack(side='right')
+            answer_frames.append(answer_frame)
+            answer_inputs.append(answer_input)
+            answer_checkboxs.append(answer_checkbox)
+            trash_button.bind("<Button-1>", lambda event: (answer_frame.destroy(), answer_frames.remove(answer_frame), answer_inputs.remove(answer_input), answer_checkboxs.remove(answer_checkbox), delete_answer()) if len(answer_frames) > 2 else None)
+            button_save.pack(pady=20)
         
     def add_image():
         global image
@@ -239,32 +295,40 @@ def back():
     input_test_name.pack_forget()
     button_back.place_forget()
     frame_all_questions.pack_forget()
-    bot_working.pack(pady=60)
+    bot_working.pack(pady=50)
     add_users_button.pack(pady=15)
     button_add_test.pack(pady=15)
+    button_get_results.pack(pady=15)
 
 def add_test():
     bot_working.pack_forget()
     add_users_button.pack_forget()
     button_add_test.pack_forget()
+    button_get_results.pack_forget()
     input_test_name.pack(pady=30)
     button_back.place(x=10, y=10)
     frame_buttons.pack(pady=30)
     frame_all_questions.pack()
 
 def authorize(name, password):
-    # if name == "admin" and password == "admin":
-    auth_text.pack_forget()
-    input_name.pack_forget()
-    input_password.pack_forget()
-    auth_button.pack_forget()
-    bot_working.pack(pady=60)
-    add_users_button.pack(pady=15)
-    button_add_test.pack(pady=15)
-    # else:
-    #     auth_text.configure(text="Неправильне ім'я або пароль")
+    global auth_teacher
+    session = Session()
+    teacher = session.query(Teacher).filter_by(username=name, password=password).first()
+    if teacher:
+        auth_teacher = teacher
+        auth_text.pack_forget()
+        input_name.pack_forget()
+        input_password.pack_forget()
+        auth_button.pack_forget()
+        bot_working.pack(pady=50)
+        add_users_button.pack(pady=15)
+        button_add_test.pack(pady=15)
+        button_get_results.pack(pady=15)
+    else:
+        auth_text.configure(text="Неправильне ім'я або пароль")
+    session.close()
 
-auth_text = ctk.CTkLabel(app, text="Authorization", font=("Arial", 40))
+auth_text = ctk.CTkLabel(app, text="Авторизація", font=("Arial", 40))
 auth_text.pack(pady=40)
 input_name = ctk.CTkEntry(app, placeholder_text="Введіть своє ім'я", width=300, height=40, font=("Arial", 18))
 input_name.pack(pady=10)

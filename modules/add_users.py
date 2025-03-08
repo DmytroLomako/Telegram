@@ -2,7 +2,7 @@ import os.path, customtkinter as ctk, pandas as pd
 from .models import User, Session
 
 
-def add_users():
+def add_users(teacher):
     try:
         
         file_path = ctk.filedialog.askopenfilename(
@@ -32,8 +32,14 @@ def add_users():
             try:
                 print(row['Username'], row['Password'], row['Email'])   
                 session = Session()
-                user = User(username=row['Username'], password=row['Password'], email=row['Email'])
-                session.add(user)
+                get_user = session.query(User).filter_by(username=row['Username'], password=row['Password'], email=row['Email']).first()
+                if get_user:
+                    if teacher not in get_user.teachers:
+                        get_user.teachers.append(teacher)
+                else:
+                    user = User(username=row['Username'], password=row['Password'], email=row['Email'])
+                    user.teachers.append(teacher)
+                    session.add(user)
                 session.commit()
                 session.close()
                 

@@ -89,5 +89,7 @@ async def save_result(press_user_id, name, message_id = None):
         session.add(result)
         session.commit()
         session.close()
-        await bot.send_message(text='Ваш результат успішно збережено\nВи можете подивидить за командою /results', chat_id=press_user_id)
+        await bot.send_message(text='Ваш результат успішно збережено\nВи можете подивидить по команді /results', chat_id=press_user_id)
+    else:
+        await bot.send_message(text='На жаль ваш результат не було збережено, бо ви не зареєстровані', chat_id=press_user_id)
     del users_test_data[press_user_id]

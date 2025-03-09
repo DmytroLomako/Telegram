@@ -28,6 +28,8 @@ class Teacher(Base):
     password = sqlalchemy.Column(sqlalchemy.String(15))
     telegram_id = sqlalchemy.Column(sqlalchemy.Integer, unique=True, nullable=True, default=None)
     users = relationship('User', secondary=user_teacher, back_populates='teachers')
+    email = sqlalchemy.Column(sqlalchemy.String, nullable=True, default=None)
+    is_admin = sqlalchemy.Column(sqlalchemy.Boolean, default=False)
     def __repr__(self):
         return f'Teacher: {self.username}'
     

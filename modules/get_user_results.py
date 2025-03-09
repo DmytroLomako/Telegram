@@ -41,10 +41,10 @@ def get_results(user_id):
     
     wb = load_workbook(filename=file_name)
     ws = wb.active
-    last_column = ws.max_column - 1
-    ws.merge_cells(start_row=last_column, start_column=1, end_row=last_column, end_column=4)
-    ws.cell(row=last_column, column=1).value = 'Середній результат, %'
-    ws.cell(row=last_column, column=5).value = global_result
+    last_row = ws.max_row + 1
+    ws.merge_cells(start_row=last_row, start_column=1, end_row=last_row, end_column=4)
+    ws.cell(row=last_row, column=1).value = 'Середній результат, %'
+    ws.cell(row=last_row, column=5).value = global_result
     border = Border(
         left=Side(style='thin'),
         right=Side(style='thin'),

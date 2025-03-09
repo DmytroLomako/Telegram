@@ -20,12 +20,12 @@ async def handler_message(message:Message):
                     if quiz_dict[message.text]["users"] and str(id) in str(quiz_dict[message.text]["users"][0]["id"]):
                         await message.answer("Ви вже в тесті")
                     else:
-                        await message.answer("Enter name") 
+                        await message.answer("Введіть ім'я") 
                         user_status[id] = f"enter-name-{message.text}"
                 else:
                     await message.answer("Цей тест вже запущений")
             else:
-                await message.answer("This code invalid, try again")
+                await message.answer("Цей код недійсний")
         # Якщо користувач вводить ім'я
         elif 'enter-name' in user_status[id]:
             # split - помогает разделить строку на список по символу
@@ -39,14 +39,14 @@ async def handler_message(message:Message):
             quiz_dict[code]["users"].append(dict)
             # Онулюємо статус користувача
             del user_status[id]
-            await message.answer("Waiting...")
+            await message.answer("Очікування...")
             # Текст списку користувачів
-            text = "User list:\n"
+            text = "Список користувачів:\n"
             for user in quiz_dict[code]["users"]:
                 name = user["name"]
                 text += f" • {name}\n"
 
-            button_start = InlineKeyboardButton(text='Start quiz', callback_data=f'start-{code}')
+            button_start = InlineKeyboardButton(text='Почати квіз', callback_data=f'start-{code}')
             keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_start]])
             await bot.edit_message_text(chat_id = quiz_dict[code]["chat_id_admin"], message_id = quiz_dict[code]["id_message_users"], text=text, reply_markup=keyboard)
             name_quiz = quiz_dict[code]["quiz_name"]
@@ -105,12 +105,36 @@ async def handler_message(message:Message):
             button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
             button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{test_name}-{code}')
             admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
+            
+            question_type = question["type"]
+            question_text = question["question"]
+            question_image = question["image"]
+            if question_type == 'input':
+                text_variants = 'Немає варіантів (питання з типом введення)\n'
+            else:
+                question_variants = question['variants']
+                for variant in question_variants:
+                    text_variants += f'{question_variants.index(variant) + 1}. {variant}\n'
+            # try:
+            #     message_answer = quiz_dict[code]['id_message_answer']
+            #     message = await bot.edit_message_text(chat_id=id_admin, text=f"Запитання: {question_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:\n{list_user_answered}\nКористувачі, які відповіли: {list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}", message_id=message_answer, reply_markup=admin_keyboard)
+            #     quiz_dict[code]["id_message_answer"] = message.message_id
+            # except Exception as error:
+            #     print(error)
             try:
                 message_answer = quiz_dict[code]['id_message_answer']
-                message = await bot.edit_message_text(chat_id=id_admin, text=f"Users answered: {list_user_answered}\nDon't answered: {list_user_not_answered}", message_id=message_answer, reply_markup=admin_keyboard)
-                quiz_dict[code]["id_message_answer"] = message.message_id
+                if question_image:
+                    media = aiogram.types.InputMediaPhoto(
+                        type = 'photo',
+                        media = get_image(question_image),
+                        caption = f"Запитання: {question_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}",
+                    )
+                    await bot.edit_message_media(chat_id=id_admin, message_id=message_answer, media=media, reply_markup=admin_keyboard)
+                else:
+                    message = await bot.edit_message_text(chat_id=id_admin, text=f"Запитання: {question_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}", message_id=message_answer, reply_markup=admin_keyboard)
             except Exception as error:
-                print(error)
+                await bot.delete_message(chat_id=id_admin, message_id=message_answer)
+                message = await bot.send_message(chat_id=id_admin, text=f"Запитання: {question_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}", reply_markup=admin_keyboard)
                 
         elif 'user-input' in user_status[id]:
             test_name = user_status[id].split('-')[-1]

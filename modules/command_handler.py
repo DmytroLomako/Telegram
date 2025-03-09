@@ -10,9 +10,9 @@ async def start(message: Message):
     # перевіряємо чи адмін користувач
     if message.from_user.id in id_admins:
         # await bot.send_message(chat_id=message.from_user.id, text="<span style=\"color:#fc5252;\">text</span>", parse_mode=ParseMode.HTML)
-        await message.answer('Hello admin👋, you can execute this commands:\n\n/start - Greetings, starting the bot\n/create - Creating a quiz \n/delete - Delete quiz\n/start_quiz - Start public quiz\n/quiz - Start private quiz\n/results - Shows all results')
+        await message.answer('Привіт адмін👋, ви можете використати ці команди:\n\n/start - Вітання, запуск бота\n/create - Створення вікторини\n/delete - Видалення вікторини\n/start_quiz - Запуск публічної вікторини\n/quiz - Запуск приватної вікторини\n/results - Показує всі результати')
     else:
-        await message.answer('Hello user👋, to join to test enter /join')
+        await message.answer('Привіт користувач👋, щоб приєднатися до тестування, напишіть /join')
         
 def read_all_tests(test_type: str, teachers: list[str]) -> InlineKeyboardMarkup:
     list_buttons = []
@@ -37,11 +37,11 @@ async def start_quiz(message: Message):
         teacher = session.query(Teacher).filter_by(telegram_id=message.from_user.id).first()
         keyboard = read_all_tests('quiz', [teacher.username])
         session.close()
-        await message.answer('Select quiz:', reply_markup=keyboard)
+        await message.answer('Виберіть тест:', reply_markup=keyboard)
 
 @dispatcher.message(Command(commands=['join']))
 async def join(message: Message):
-    await message.answer('Please, enter the code.')
+    await message.answer('Введіть код')
     user_status[message.from_user.id] = 'enter-code'
     
 @dispatcher.message(Command(commands=['quiz']))

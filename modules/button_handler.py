@@ -21,10 +21,10 @@ async def handler_button(callback: CallbackQuery):
                 quiz_code = random.randint(1000, 9999)
             # Start quiz
             list_code.append(str(quiz_code))
-            await bot.edit_message_text(text = f"Quiz: {quiz_name}\nCode: {quiz_code}", message_id=callback.message.message_id, chat_id = press_user_id)
+            await bot.edit_message_text(text = f"Квіз: {quiz_name}\nКод: {quiz_code}", message_id=callback.message.message_id, chat_id = press_user_id)
             # User list
             
-            message = await bot.send_message(text = 'User list: \n', chat_id=press_user_id)
+            message = await bot.send_message(text = 'Список користувачів: \n', chat_id=press_user_id)
             # додаємо новий тест до словнику
             quiz_dict[str(quiz_code)] = {
                 "users": [], 
@@ -60,7 +60,7 @@ async def handler_button(callback: CallbackQuery):
                             user_name = result_dict[f"{quiz_name}_{code}"][str(user_id)]['name']
                             text_admin += f' • {user_name} - {correct_count}/{question_count}\n'
                             sum_result += int(correct_count)
-                            text = f"The test is over, your results are {correct_count}/{question_count} correct answers"
+                            text = f"Тест завершено, ваш результат {correct_count}/{question_count} правильних відповідей"
                             await bot.send_message(text = text,chat_id= user_id)
                     sum_result /= question_count * len(list_user)
                     sum_result *= 100
@@ -137,19 +137,39 @@ async def handler_button(callback: CallbackQuery):
                             list_user_name += f'\n • {name}'
                     if "next_question" in callback.data:
                         quiz_dict[code]['question_index'] += 1
-                    button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
-                    button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
+                    button_next = InlineKeyboardButton(text='Далі', callback_data=f'next_question-{code}')
+                    button_end = InlineKeyboardButton(text='❌ Зупинити Квіз ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
                     admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
+                    text_variants = ''
+                    if question_type == 'input':
+                        text_variants = 'Немає варіантів (питання з типом введення)\n'
+                    else:
+                        for variant in question_variants:
+                            text_variants += f'{question_variants.index(variant) + 1}. {variant}\n'
                     try:
-                        message = await bot.edit_message_text(chat_id=id_admin, text=f"Users answered:\nDon't answered: {list_user_name}", message_id=callback.message.message_id, reply_markup=admin_keyboard)
+                        print(1)
+                        if question_image:
+                            print(2)
+                            media = aiogram.types.InputMediaPhoto(
+                                type = 'photo',
+                                media = get_image(question_image),
+                                caption = f"Запитання: {question_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:\nКористувачі, які не відповіли: {list_user_name}",
+                            )
+                            message = await bot.edit_message_media(chat_id=id_admin, message_id=callback.message.message_id, media=media, reply_markup=admin_keyboard)
+                        else:
+                            print(3)
+                            message = await bot.edit_message_text(chat_id=id_admin, text=f"Запитання: {question_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:\nКористувачі, які не відповіли: {list_user_name}", message_id=callback.message.message_id, reply_markup=admin_keyboard)
                         quiz_dict[code]["id_message_answer"] = message.message_id
                     except Exception as error:
                         print(error)
+                        await bot.delete_message(chat_id=id_admin, message_id=callback.message.message_id)
+                        message = await bot.send_message(chat_id=id_admin, text=f"Запитання: {question_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:\nКористувачі, які не відповіли: {list_user_name}", reply_markup=admin_keyboard)
+                        quiz_dict[code]["id_message_answer"] = message.message_id
 
     if 'end_quiz' in callback.data:
         quiz_name = callback.data.split('-')[-2]
         code = callback.data.split('-')[-1]
-        text_admin = "The test is over.\n\nUser results:\n"
+        text_admin = "Тест завершено.\n\Результати учасників:\n"
         count_answers = quiz_dict[code]["question_index"]
         sum_result = 0
         list_user = quiz_dict[code]['users']
@@ -162,11 +182,11 @@ async def handler_button(callback: CallbackQuery):
                 user_name = result_dict[f"{quiz_name}_{code}"][str(user_id)]['name']
                 text_admin += f' • {user_name} - {correct_count}/{count_answers}\n'
                 sum_result += int(correct_count)
-                text = f"The test is over, your results are {correct_count}/{count_answers} correct answers"
+                text = f"Тест завершено, ваш результат {correct_count}/{count_answers} правильних відповідей"
                 await bot.send_message(text = text,chat_id= user_id)
         sum_result /= count_answers * len(list_user)
         sum_result *= 100
-        text_admin += f'\n Global result - {int(sum_result)}%'
+        text_admin += f'\n Глобальний результат - {int(sum_result)}%'
         await bot.delete_message(chat_id=id_admin, message_id=callback.message.message_id)
         await bot.send_message(text = text_admin, chat_id = id_admin)
         del quiz_dict[code]
@@ -203,17 +223,17 @@ async def handler_button(callback: CallbackQuery):
                 #     count_result += 1
                 if len(correct_answer) == 1:
                     if answer == correct_answer[0]:
-                        text = f'{question_text}\nYour answer: 🟢 {answer} 🟢'
+                        text = f'{question_text}\Ваша відповідь: 🟢 {answer} 🟢'
                         count_result += 1
                     else:
-                        text = f'{question_text}\nYour answer: 🔴 {answer} 🔴\nCorrect answer: {correct_answer[0]}'
+                        text = f'{question_text}\Ваша відповідь: 🔴 {answer} 🔴\Правильна відповідь: {correct_answer[0]}'
                 else:
                     if set(ast.literal_eval(f'[{answer}]')) == set(correct_answer):
                         a = ''
                         for ans in ast.literal_eval(f'[{answer}]'):
                             a += f'{ans}, '
                         a = a[:-2]
-                        text = f'{question_text}\nYour answer: 🟢 {a} 🟢'
+                        text = f'{question_text}\Ваша відповідь: 🟢 {a} 🟢'
                         count_result += 1
                     else:
                         cor_ans = ''
@@ -224,7 +244,7 @@ async def handler_button(callback: CallbackQuery):
                         for ans in correct_answer:
                             cor_ans += f'{ans}, '
                         cor_ans = cor_ans[:-2]
-                        text = f'{question_text}\nYour answer: 🔴 {a} 🔴\nCorrect answer: {cor_ans}'
+                        text = f'{question_text}\Ваша відповідь: 🔴 {a} 🔴\Правильна відповідь: {cor_ans}'
                 await bot.send_message(chat_id=press_user_id, text=text)
                 
                 # list_buttons = [[]]
@@ -529,12 +549,38 @@ async def handler_button(callback: CallbackQuery):
             
             if que_image:
                 await bot.delete_message(chat_id=press_user_id, message_id=callback.message.message_id)
-                await bot.send_message(text=f"{que_text}\nYour answer: {que_answer}", chat_id=press_user_id)
+                await bot.send_message(text=f"{que_text}\nВаша відповідь: {que_answer}", chat_id=press_user_id)
             else:
-                await bot.edit_message_text(text=f"{que_text}\nYour answer: {que_answer}", message_id=callback.message.message_id, chat_id=press_user_id)
+                await bot.edit_message_text(text=f"{que_text}\nВаша відповідь: {que_answer}", message_id=callback.message.message_id, chat_id=press_user_id)
                     
-            button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
-            button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
+            button_next = InlineKeyboardButton(text='Далі', callback_data=f'next_question-{code}')
+            button_end = InlineKeyboardButton(text='❌ Зупинити Квіз ❌', callback_data=f'end_quiz-{quiz_name}-{code}')
             admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
-            text = f"Users answered: {list_user_answered}\nDon't answered: {list_user_not_answered}"
-            await bot.edit_message_text(text= text, chat_id= quiz_dict[code]["chat_id_admin"], message_id= quiz_dict[code]["id_message_answer"], reply_markup=admin_keyboard)
+            
+            que_type = question[question_index]['type']
+            question_image = question[question_index]['image']
+            text_variants = ''
+            if que_type == 'input':
+                text_variants = 'Немає варіантів (питання з типом введення)\n'
+            else:
+                question_variants = question[question_index]['variants']
+                for variant in question_variants:
+                    text_variants += f'{question_variants.index(variant) + 1}. {variant}\n'
+            
+            try:
+                message_answer = quiz_dict[code]['id_message_answer']
+                if question_image:
+                    media = aiogram.types.InputMediaPhoto(
+                        type = 'photo',
+                        media = get_image(que_image),
+                        caption = f"Запитання: {que_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}",
+                    )
+                    await bot.edit_message_media(media=media, chat_id= quiz_dict[code]["chat_id_admin"], message_id=message_answer, reply_markup=admin_keyboard)
+                else:
+                    message = await bot.edit_message_text(chat_id= quiz_dict[code]["chat_id_admin"], text=f"Запитання: {que_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}", message_id=message_answer, reply_markup=admin_keyboard)
+            except:
+                print(4)
+                await bot.delete_message(chat_id= quiz_dict[code]["chat_id_admin"], message_id=message_answer)
+                message = await bot.send_message(chat_id= quiz_dict[code]["chat_id_admin"], text=f"Запитання: {que_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}", reply_markup=admin_keyboard)
+            # text = f"Запитання: {que_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}"
+            # await bot.edit_message_text(text= text, chat_id= quiz_dict[code]["chat_id_admin"], message_id= quiz_dict[code]["id_message_answer"], reply_markup=admin_keyboard)

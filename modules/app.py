@@ -1,9 +1,9 @@
-import PIL.Image
-import PIL.ImageTk
-import customtkinter as ctk, os, json, PIL, webbrowser
+import PIL.Image, PIL.ImageTk, customtkinter as ctk, os, json, PIL, webbrowser, smtplib
 from .add_users import add_users
 from .models import Teacher, Session, Result, User
 from .get_user_results import get_results
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 questions = []
 
@@ -39,6 +39,7 @@ bot_working = ctk.CTkLabel(app, text="Бот працює", font=("Arial", 40))
 add_users_button = ctk.CTkButton(app, text="Додати користувачів", font=("Arial", 20), width=230, height=40, command=lambda: add_users(auth_teacher))
 button_add_test = ctk.CTkButton(app, text="Додати тест", font=("Arial", 20), width=230, height=40, command=lambda: add_test())
 button_get_results = ctk.CTkButton(app, text="Отримати результати", font=("Arial", 20), width=230, height=40, command=lambda: get_results_window())
+button_add_teachers = ctk.CTkButton(app, text="Додати вчителя", font=("Arial", 20), width=230, height=40, command=lambda: add_teacher())
 input_test_name = ctk.CTkEntry(app, placeholder_text="Введіть назву тесту", width=300, height=40, font=("Arial", 18))
 button_back = ctk.CTkButton(app, text="⬅", font=("Arial", 20), width=30, height=40, command=lambda: back())
 frame_buttons = ctk.CTkFrame(frame_all_questions, width=500, height=80, fg_color='transparent')
@@ -50,6 +51,42 @@ button_create_question_input.pack(side="right", padx=10)
 button_save_test = ctk.CTkButton(frame_all_questions, text="Зберегти", font=("Arial", 20), width=200, height=40, command=lambda: save_test())
 button_save_test.pack(pady=20)
 
+def add_teacher():
+    modal_window = ctk.CTkToplevel(app)
+    modal_window.title("Створення Вчителя")
+    modal_window_width = 400
+    modal_window_height = 330
+    modal_window_x = (app.winfo_screenwidth() // 2) - (modal_window_width // 2)
+    modal_window_y = (app.winfo_screenheight() // 2) - (modal_window_height // 2) - 50
+    modal_window.geometry(f'{modal_window_width}x{modal_window_height}+{modal_window_x}+{modal_window_y}')
+    modal_window.resizable(False, False)   
+    frame = ctk.CTkFrame(modal_window, width=modal_window_width, height=modal_window_height, fg_color='transparent')
+    frame.pack(pady=20)
+    name = ctk.CTkEntry(frame, placeholder_text="Введіть ім'я", width=300, height=40, font=("Arial", 18))
+    name.pack(pady=15)
+    password = ctk.CTkEntry(frame, placeholder_text="Введіть пароль", width=300, height=40, font=("Arial", 18))
+    password.pack(pady=15)
+    email = ctk.CTkEntry(frame, placeholder_text="Введіть пошту", width=300, height=40, font=("Arial", 18))
+    email.pack(pady=15)
+    button_save = ctk.CTkButton(frame, text="Додати", font=("Arial", 20), width=200, height=40, command=lambda: save_teacher(name.get(), password.get(), email.get(), modal_window) if name.get() and password.get() and email.get() and '@gmail.com' in email.get() else None)
+    button_save.pack(pady=20)
+
+def save_teacher(name, password, email, modal_window):
+    server = smtplib.SMTP_SSL('smtp.gmail.com', 465) 
+    server.login("", "")
+    session = Session()
+    teacher = Teacher(username=name, password=password, email=email)
+    msg = MIMEMultipart()
+    msg["Subject"] = "Ваш Quiz Teacher Account"
+    body = f"Ваш логін: {name}\nВаш пароль: {password}\nУвійти в ваш обліковий запис ви можете, увійшовши в Telegram, вписавши у пошуку '@QuizTgDBot' і у боті написавши '/auth'."
+    msg.attach(MIMEText(body, "plain"))
+    server.sendmail("", f"{email}", msg.as_string())
+    session.add(teacher)
+    session.commit()
+    session.close()
+    server.quit()
+    modal_window.destroy()
+
 def get_results_window():
     modal_window = ctk.CTkToplevel(app)
     modal_window.title("Результати")
@@ -58,7 +95,7 @@ def get_results_window():
     modal_window_x = (app.winfo_screenwidth() // 2) - (modal_window_width // 2)
     modal_window_y = (app.winfo_screenheight() // 2) - (modal_window_height // 2) - 50
     modal_window.geometry(f'{modal_window_width}x{modal_window_height}+{modal_window_x}+{modal_window_y}')
-    scrollable_frame = ctk.CTkScrollableFrame(modal_window, width=350, height=280)
+    scrollable_frame = ctk.CTkScrollableFrame(modal_window, width=350, height=280, fg_color='transparent')
     scrollable_frame.pack(pady=10)
     session = Session()
     results = session.query(Result).all()
@@ -66,8 +103,18 @@ def get_results_window():
     for result in results:
         if result.user_id not in list_users:
             user = session.query(User).filter_by(id=result.user_id).first()
-            button = ctk.CTkButton(scrollable_frame, text=f'{user.username}', font=("Arial", 16), width=200, height=35, command=lambda user=user: get_results(result.user_id))
-            button.pack(pady=10)
+            frame = ctk.CTkFrame(scrollable_frame, width=350, height=40)
+            frame.pack(pady=10)
+            user_number = ctk.CTkLabel(frame, text=f'{len(list_users) + 1}.', font=("Arial", 20), width=20, height=35)
+            user_number.pack(side='left', padx=10)
+            name = ctk.CTkLabel(frame, text=f'{user.username}', font=("Arial", 20))
+            name.pack(side='left', padx=0)
+            path_button_download = os.path.abspath(__file__ + '/../../static/app_images/download.png')
+            image_download = ctk.CTkImage(PIL.Image.open(path_button_download), size=(20, 20))
+            button_download = ctk.CTkButton(frame, text="", image=image_download, width=20, height=20, command=lambda user=user: get_results(result.user_id))
+            button_download.pack(side='right', padx=10)
+            frame.pack_propagate(False)
+            # ctk.CTkButton(frame, text=f'{user.username}', font=("Arial", 16), width=200, height=35, command=lambda user=user: get_results(result.user_id))
             list_users.append(result.user_id)
 
 def save_test():
@@ -295,16 +342,21 @@ def back():
     input_test_name.pack_forget()
     button_back.place_forget()
     frame_all_questions.pack_forget()
-    bot_working.pack(pady=50)
+    bot_working.pack(pady=30)
     add_users_button.pack(pady=15)
     button_add_test.pack(pady=15)
     button_get_results.pack(pady=15)
+    if auth_teacher and auth_teacher.is_admin:
+        button_add_teachers.pack(pady=15)
+    print(auth_teacher)
 
 def add_test():
     bot_working.pack_forget()
     add_users_button.pack_forget()
     button_add_test.pack_forget()
     button_get_results.pack_forget()
+    if auth_teacher and auth_teacher.is_admin:
+        button_add_teachers.pack_forget()
     input_test_name.pack(pady=30)
     button_back.place(x=10, y=10)
     frame_buttons.pack(pady=30)
@@ -320,10 +372,12 @@ def authorize(name, password):
         input_name.pack_forget()
         input_password.pack_forget()
         auth_button.pack_forget()
-        bot_working.pack(pady=50)
+        bot_working.pack(pady=30)
         add_users_button.pack(pady=15)
         button_add_test.pack(pady=15)
         button_get_results.pack(pady=15)
+        if auth_teacher.is_admin:
+            button_add_teachers.pack(pady=15)
     else:
         auth_text.configure(text="Неправильне ім'я або пароль")
     session.close()

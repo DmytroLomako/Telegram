@@ -20,8 +20,36 @@ async def handler_message(message:Message):
                     if quiz_dict[message.text]["users"] and str(id) in str(quiz_dict[message.text]["users"][0]["id"]):
                         await message.answer("Ви вже в тесті")
                     else:
-                        await message.answer("Введіть ім'я") 
-                        user_status[id] = f"enter-name-{message.text}"
+                        session = Session()
+                        user_auth = session.query(User).filter_by(telegram_id=id).first()
+                        session.close()
+                        if user_auth:
+                            code = message.text
+                            dict = {
+                                "name": user_auth.username, 
+                                "id": id,
+                                "answer": None
+                            }
+                            quiz_dict[message.text]["users"].append(dict)
+                            del user_status[id]
+                            await message.answer("Очікування...")
+                            # Текст списку користувачів
+                            text = "Список користувачів:\n"
+                            for user in quiz_dict[code]["users"]:
+                                name = user["name"]
+                                text += f" • {name}\n"
+
+                            button_start = InlineKeyboardButton(text='Почати квіз', callback_data=f'start-{code}')
+                            keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_start]])
+                            await bot.edit_message_text(chat_id = quiz_dict[code]["chat_id_admin"], message_id = quiz_dict[code]["id_message_users"], text=text, reply_markup=keyboard)
+                            name_quiz = quiz_dict[code]["quiz_name"]
+                            result_dict[f"{name_quiz}_{code}"][str(id)] = {
+                                'name': user_auth.username,
+                                'result': 0
+                            } 
+                        else:
+                            await message.answer("Введіть ім'я") 
+                            user_status[id] = f"enter-name-{message.text}"
                 else:
                     await message.answer("Цей тест вже запущений")
             else:

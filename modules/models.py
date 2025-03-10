@@ -13,6 +13,7 @@ class User(Base):
     __tablename__ = 'users'
     id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
     results = relationship('Result', back_populates='user', cascade='all, delete')
+    quiz_results = relationship('ResultQuiz', back_populates='user', cascade='all, delete') 
     username = sqlalchemy.Column(sqlalchemy.String)
     telegram_id = sqlalchemy.Column(sqlalchemy.Integer, unique=True, nullable=True, default=None)
     password = sqlalchemy.Column(sqlalchemy.String(15))
@@ -44,5 +45,17 @@ class Result(Base):
     wrong_answers = sqlalchemy.Column(sqlalchemy.Integer)
     def __repr__(self):
         return f'Result: {self.result}, User: {self.user_id}'
+    
+class ResultQuiz(Base):
+    __tablename__ = 'results_quiz'
+    id = sqlalchemy.Column(sqlalchemy.Integer, primary_key=True)
+    test_id = sqlalchemy.Column(sqlalchemy.Integer)
+    user = relationship('User', back_populates='quiz_results')
+    user_id = sqlalchemy.Column(sqlalchemy.Integer, sqlalchemy.ForeignKey('users.id', ondelete='CASCADE'))
+    test_name = sqlalchemy.Column(sqlalchemy.String)
+    right_answers = sqlalchemy.Column(sqlalchemy.Integer)
+    wrong_answers = sqlalchemy.Column(sqlalchemy.Integer)
+    def __repr__(self):
+        return f'User: {self.user_id}'
     
 Base.metadata.create_all(db)

@@ -53,6 +53,13 @@ async def handler_button(callback: CallbackQuery):
                     text_admin = "The test is over.\n\nUser results:\n"
                     sum_result = 0
                     question_count = len(list_question)
+                    session = Session()
+                    all_results = session.query(ResultQuiz).all()
+                    session.close()
+                    test_id = 1
+                    if all_results:
+                        last_test_id = all_results[-1].test_id
+                        test_id = last_test_id + 1
                     for user in list_user:
                         user_id = user['id']
                         if f"{quiz_name}_{code}" in result_dict and str(user_id) in result_dict[f"{quiz_name}_{code}"]:
@@ -61,6 +68,16 @@ async def handler_button(callback: CallbackQuery):
                             text_admin += f' • {user_name} - {correct_count}/{question_count}\n'
                             sum_result += int(correct_count)
                             text = f"Тест завершено, ваш результат {correct_count}/{question_count} правильних відповідей"
+                            wrong_count = int(question_count) - int(correct_count)
+                            session = Session()
+                            try:
+                                user = session.query(User).filter_by(telegram_id=user_id).first()
+                                result = ResultQuiz(user_id = user.id, test_id = test_id, test_name = quiz_name, right_answers = correct_count, wrong_answers = wrong_count)
+                                session.add(result)
+                                session.commit()
+                            except:
+                                pass
+                            session.close()
                             await bot.send_message(text = text,chat_id= user_id)
                     sum_result /= question_count * len(list_user)
                     sum_result *= 100

@@ -6,6 +6,10 @@ from .read_static import read_json
 async def save_result(press_user_id, name, message_id = None):
     test = read_json(name)
     question_count = len(test['questions'])
+    if 'links' in test:
+        links = test['links']
+    else:
+        links = False
     user_result = 'Тест завершено\n'
     if message_id == None:
         await bot.send_message(text=user_result, chat_id=press_user_id)
@@ -92,4 +96,9 @@ async def save_result(press_user_id, name, message_id = None):
         await bot.send_message(text='Ваш результат успішно збережено\nВи можете подивидить по команді /results', chat_id=press_user_id)
     else:
         await bot.send_message(text='На жаль ваш результат не було збережено, бо ви не зареєстровані', chat_id=press_user_id)
+    if links:
+        text_links = 'Якщо ви бажаєте закріпити знання по цій темі:\n'
+        for link in links.keys():
+            text_links += f'• [{link}]({links[link]})\n'
+        await bot.send_message(text=text_links, chat_id=press_user_id, parse_mode='Markdown', disable_web_page_preview=True)
     del users_test_data[press_user_id]

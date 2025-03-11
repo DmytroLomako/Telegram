@@ -1,10 +1,12 @@
-import PIL.Image, PIL.ImageTk, customtkinter as ctk, os, json, PIL, webbrowser, smtplib
+import PIL.Image, PIL.ImageTk, customtkinter as ctk, os, json, PIL, webbrowser, smtplib, random
 from .add_users import add_users
 from .models import Teacher, Session, Result, User, ResultQuiz
 from .get_user_results import get_results
 from .get_test_results import get_test_results
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from .settings import SYMBOLS, NUMBERS, LETTERS
+import random
 
 questions = []
 list_links_names = []
@@ -186,7 +188,7 @@ def add_teacher():
     modal_window = ctk.CTkToplevel(app)
     modal_window.title("Створення Вчителя")
     modal_window_width = 400
-    modal_window_height = 330
+    modal_window_height = 260
     modal_window_x = (app.winfo_screenwidth() // 2) - (modal_window_width // 2)
     modal_window_y = (app.winfo_screenheight() // 2) - (modal_window_height // 2) - 50
     modal_window.geometry(f'{modal_window_width}x{modal_window_height}+{modal_window_x}+{modal_window_y}')
@@ -195,16 +197,20 @@ def add_teacher():
     frame.pack(pady=20)
     name = ctk.CTkEntry(frame, placeholder_text="Введіть ім'я", width=300, height=40, font=("Arial", 18))
     name.pack(pady=15)
-    password = ctk.CTkEntry(frame, placeholder_text="Введіть пароль", width=300, height=40, font=("Arial", 18))
-    password.pack(pady=15)
     email = ctk.CTkEntry(frame, placeholder_text="Введіть пошту", width=300, height=40, font=("Arial", 18))
     email.pack(pady=15)
-    button_save = ctk.CTkButton(frame, text="Додати", font=("Arial", 20), width=200, height=40, command=lambda: save_teacher(name.get(), password.get(), email.get(), modal_window) if name.get() and password.get() and email.get() and '@gmail.com' in email.get() else None)
+    button_save = ctk.CTkButton(frame, text="Додати", font=("Arial", 20), width=200, height=40, command=lambda: save_teacher(name.get(), email.get(), modal_window) if name.get() and email.get() and '@gmail.com' in email.get() else None)
     button_save.pack(pady=20)
 
-def save_teacher(name, password, email, modal_window):
+def save_teacher(name, email, modal_window):
     server = smtplib.SMTP_SSL('smtp.gmail.com', 465) 
     server.login("", "")
+    chosen_symbol = random.choice(SYMBOLS)
+    chosen_number = random.choice(NUMBERS)
+    chosen_letters = [random.choice(LETTERS) for i in range(6)]
+    password_elements_list = [chosen_symbol] + [chosen_number] + chosen_letters
+    random.shuffle(password_elements_list)
+    password = ''.join(password_elements_list)
     session = Session()
     teacher = Teacher(username=name, password=password, email=email)
     msg = MIMEMultipart()

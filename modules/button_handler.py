@@ -4,6 +4,7 @@ from .models import *
 from .read_static import read_json, get_image
 import random, ast, aiogram.types
 from .user_result import save_result
+from .get_user_results import get_results, get_one_result
 
 @dispatcher.callback_query()
 # оброблюємо натиск кнопки
@@ -475,8 +476,11 @@ async def handler_button(callback: CallbackQuery):
             #     list_buttons.append([button])
             # keyboard = InlineKeyboardMarkup(inline_keyboard=list_buttons)
             # await bot.send_message(text=question_text, reply_markup=keyboard, chat_id=press_user_id)
-        result = round(result / count_answers * 100, 1)
-        user_result = f'\nВаш результат: {result}%'
+        try:
+            result = round(result / count_answers * 100, 1)
+            user_result = f'\nВаш результат: {result}%'
+        except:
+            user_result = f'\nВаш результат: 0%'
         await bot.send_message(text=user_result, chat_id=press_user_id)
         await bot.send_message(text="Ваш результат не було збережено, бо ви не пройшли тест до кінця", chat_id=press_user_id)
         del users_test_data[press_user_id]
@@ -601,3 +605,32 @@ async def handler_button(callback: CallbackQuery):
                 message = await bot.send_message(chat_id= quiz_dict[code]["chat_id_admin"], text=f"Запитання: {que_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}", reply_markup=admin_keyboard)
             # text = f"Запитання: {que_text}\nВаріанти відповідей: \n{text_variants}\nКористувачі, які відповіли:{list_user_answered}\nКористувачі, які не відповіли: {list_user_not_answered}"
             # await bot.edit_message_text(text= text, chat_id= quiz_dict[code]["chat_id_admin"], message_id= quiz_dict[code]["id_message_answer"], reply_markup=admin_keyboard)
+            
+    elif 'download-all' in callback.data:
+        user_id = callback.data.split('-')[-1]
+        result_path = get_results(user_id, True)
+        result_full_path = os.path.abspath(__file__ + f'/../../{result_path}')
+        file = aiogram.types.FSInputFile(result_full_path)
+        await bot.send_document(chat_id=press_user_id, document=file)
+        os.remove(result_full_path)
+        
+    elif 'download-test' in callback.data:
+        user_id = callback.data.split('-')[-1]
+        session = Session()
+        results = session.query(Result).filter_by(user_id = user_id).all()
+        session.close()
+        text = 'Виберіть тест для завантаження:'
+        list_buttons = []
+        for result in results:
+            button = InlineKeyboardButton(text=result.test_name, callback_data=f'download-one-test-{result.id}')
+            list_buttons.append([button])
+        keyboard = InlineKeyboardMarkup(inline_keyboard=list_buttons)
+        await bot.send_message(text=text, chat_id=press_user_id, reply_markup=keyboard)
+        
+    elif 'download-one-test' in callback.data:
+        result_id = callback.data.split('-')[-1]
+        result_path = get_one_result(result_id)
+        result_full_path = os.path.abspath(__file__ + f'/../../{result_path}')
+        file = aiogram.types.FSInputFile(result_full_path)
+        await bot.send_document(chat_id=press_user_id, document=file)
+        os.remove(result_full_path)

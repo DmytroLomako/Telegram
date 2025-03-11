@@ -106,3 +106,22 @@ async def logout(message: Message):
             return 1
     session.close()
     await message.answer('Ви не авторизовані')
+    
+@dispatcher.message(Command(commands=['download_results']))
+async def download_results(message: Message):
+    session = Session()
+    user = session.query(User).filter_by(telegram_id=message.from_user.id).first()
+    if user:
+        results = session.query(Result).filter_by(user_id=user.id).all()
+        session.close()
+        if results:
+            text = 'Виберіть тип завантаження'
+            button1 = InlineKeyboardButton(text='Завантажити всі результати', callback_data=f'download-all-{user.id}')
+            button2 = InlineKeyboardButton(text='Завантажити результати по окремому тесту', callback_data=f'download-test-{user.id}')
+            keyboard = InlineKeyboardMarkup(inline_keyboard=[[button1], [button2]])
+            await message.answer(text, reply_markup=keyboard)
+        else:
+            await message.answer('У вас немає результатів')
+    else:
+        await message.answer('Ви не авторизовані')
+        session.close()

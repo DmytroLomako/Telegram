@@ -1,6 +1,11 @@
 from aiogram import Bot, Dispatcher
 from .models import Teacher, Session, User
+import string
 
+
+SYMBOLS = ('!', '@', '#', '-', '@', '+', '%')
+NUMBERS = ('0', '1', '2', '3', '4', '6', '7', '8', '9')
+LETTERS = [char for char in string.ascii_letters if char != 'e' and char != 'E']
 
 bot = Bot('') # Your Telegram Bot Api Token
 dispatcher = Dispatcher()

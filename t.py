@@ -1,0 +1,2 @@
+list = ['abc', 'dfg']
+print()

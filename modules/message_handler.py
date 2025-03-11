@@ -130,8 +130,8 @@ async def handler_message(message:Message):
                 else:
                     list_user_not_answered += f'\n • {name}'
             id_admin = quiz_dict[code]["chat_id_admin"]
-            button_next = InlineKeyboardButton(text='Next', callback_data=f'next_question-{code}')
-            button_end = InlineKeyboardButton(text='❌ End Quiz ❌', callback_data=f'end_quiz-{test_name}-{code}')
+            button_next = InlineKeyboardButton(text='Далі', callback_data=f'next_question-{code}')
+            button_end = InlineKeyboardButton(text='❌ Зупинити Квіз ❌', callback_data=f'end_quiz-{test_name}-{code}')
             admin_keyboard = InlineKeyboardMarkup(inline_keyboard=[[button_next], [button_end]])
             
             question_type = question["type"]
@@ -149,8 +149,8 @@ async def handler_message(message:Message):
             #     quiz_dict[code]["id_message_answer"] = message.message_id
             # except Exception as error:
             #     print(error)
+            message_answer = quiz_dict[code]['id_message_answer']
             try:
-                message_answer = quiz_dict[code]['id_message_answer']
                 if question_image:
                     media = aiogram.types.InputMediaPhoto(
                         type = 'photo',
